@@ -16,6 +16,11 @@ from pptx_builder import build_lesson_pptx
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
+# ── Ensure required directories exist (Railway ephemeral filesystem) ──────────
+Path("state").mkdir(exist_ok=True)
+Path("outputs").mkdir(exist_ok=True)
+Path("knowledge").mkdir(exist_ok=True)
+
 TEMPLATE_PATH = str(Path(__file__).parent / "PURPOSE_Template_blank.pptx")
 OUTPUTS_DIR   = Path(__file__).parent / "outputs"
 OUTPUTS_DIR.mkdir(exist_ok=True)
@@ -257,4 +262,4 @@ def _run_generate_all(run_id: str, state: dict):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT",5001)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5001)))
