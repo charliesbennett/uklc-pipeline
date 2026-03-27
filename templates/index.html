@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UKLC Purpose Pipeline</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#1C3048;--red:#EC273B;--yellow:#F0F279;--purple:#7030A0;
+      --pink:#FAD7D8;--light:#E6EEF3;--white:#fff}
+body{font-family:'Open Sans',sans-serif;background:#f0f4f8;min-height:100vh}
+
+header{background:var(--navy);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-accent{width:4px;height:36px;background:var(--red);border-radius:2px}
+.logo-title{color:var(--yellow);font-family:'Raleway',sans-serif;font-size:18px;font-weight:800}
+.logo-sub{color:#8fa8c0;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-top:1px}
+.header-badge{background:var(--purple);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.5px}
+
+main{max-width:860px;margin:36px auto;padding:0 20px}
+
+.card{background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(28,48,72,.1);overflow:hidden;margin-bottom:24px}
+.card-header{background:var(--navy);padding:22px 28px;display:flex;align-items:center;justify-content:space-between}
+.card-header h2{color:#fff;font-family:'Raleway',sans-serif;font-size:18px;font-weight:800}
+.card-header p{color:#8fa8c0;font-size:12px;margin-top:3px}
+.card-body{padding:28px}
+
+/* API key */
+.api-row{display:flex;gap:12px;align-items:flex-end;background:#fff7ed;border:1.5px solid #fcd;border-radius:10px;padding:14px 18px;margin-bottom:24px}
+.api-row .field{flex:1}
+label{display:block;font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+input[type=password],input[type=text],select{width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;color:var(--navy);background:#f8fafc;font-family:inherit;transition:.15s}
+input:focus,select:focus{outline:none;border-color:var(--purple);background:#fff;box-shadow:0 0 0 3px rgba(112,48,160,.1)}
+.saved-tag{color:#16a34a;font-size:11px;margin-top:5px;display:none}
+
+/* Form grid */
+.grid4{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px;margin-bottom:20px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+
+/* Type selector */
+.strand-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.strand-btn{border:2px solid #e2e8f0;border-radius:10px;padding:14px 10px;cursor:pointer;text-align:center;background:#f8fafc;transition:.15s;user-select:none}
+.strand-btn:hover{border-color:var(--purple)}
+.strand-btn.active{border-color:var(--purple);background:var(--purple);color:#fff}
+.strand-btn .si{font-size:22px;display:block;margin-bottom:4px}
+.strand-btn .sn{font-size:13px;font-weight:700;display:block}
+.strand-btn .ss{font-size:10px;opacity:.7;display:block;margin-top:2px}
+
+/* Quantity */
+.qty-row{display:flex;gap:10px;margin-bottom:24px}
+.qty-btn{flex:1;padding:10px;border:2px solid #e2e8f0;border-radius:9px;background:#f8fafc;font-size:15px;font-weight:700;color:var(--navy);cursor:pointer;text-align:center;transition:.15s}
+.qty-btn:hover{border-color:var(--purple)}
+.qty-btn.active{border-color:var(--purple);background:var(--purple);color:#fff}
+
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:10px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:.2s;text-decoration:none}
+.btn-primary{background:var(--red);color:#fff;width:100%;justify-content:center;font-size:15px;padding:15px}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(236,39,59,.35)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+/* Run history */
+.run-list{display:flex;flex-direction:column;gap:10px}
+.run-item{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border:1.5px solid #e2e8f0;border-radius:10px;background:#f8fafc;transition:.15s}
+.run-item:hover{border-color:var(--purple);background:#fff}
+.run-meta{font-size:12px;color:#64748b}
+.run-title{font-weight:700;color:var(--navy);font-size:14px;margin-bottom:3px}
+.status-pill{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px}
+.s-complete{background:#dcfce7;color:#166534}
+.s-generating{background:#e0e7ff;color:#3730a3}
+.s-awaiting{background:#fef9c3;color:#854d0e}
+.s-error{background:#fee2e2;color:#991b1b}
+.s-other{background:#f1f5f9;color:#475569}
+.empty-state{text-align:center;padding:32px;color:#94a3b8;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-accent"></div>
+    <div>
+      <div class="logo-title">PURPOSE Pipeline</div>
+      <div class="logo-sub">UKLC Lesson Generator · Agentic Workflow</div>
+    </div>
+  </div>
+  <div class="header-badge">4-Agent AI Pipeline</div>
+</header>
+
+<main>
+  <!-- New Run -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2>New Lesson Run</h2>
+        <p>Brainstorm → Research → Generate → Review → PPTX</p>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <div class="api-row">
+        <div class="field">
+          <label for="apiKey">🔑 Anthropic API Key</label>
+          <input type="password" id="apiKey" placeholder="sk-ant-api03-…">
+          <div class="saved-tag" id="savedTag">✓ Saved for this session</div>
+        </div>
+      </div>
+
+      <label style="margin-bottom:10px;display:block">Lesson Strand</label>
+      <div class="strand-grid">
+        <div class="strand-btn active" data-value="Language" onclick="selectStrand(this)">
+          <span class="si">📚</span><span class="sn">Language</span><span class="ss">Vocab · Skills · Grammar</span>
+        </div>
+        <div class="strand-btn" data-value="Leadership" onclick="selectStrand(this)">
+          <span class="si">🎯</span><span class="sn">Leadership</span><span class="ss">Skills · Entrepreneurship</span>
+        </div>
+        <div class="strand-btn" data-value="Culture" onclick="selectStrand(this)">
+          <span class="si">🇬🇧</span><span class="sn">Culture</span><span class="ss">CLIL · British Culture</span>
+        </div>
+      </div>
+
+      <div class="grid4">
+        <div>
+          <label>Level</label>
+          <select id="level">
+            <option value="Level 1">Level 1 — A1/A2</option>
+            <option value="Level 2">Level 2 — B1</option>
+            <option value="Level 3" selected>Level 3 — B2/C1</option>
+            <option value="Level 4">Level 4 — C1/C2</option>
+          </select>
+        </div>
+        <div>
+          <label>Week</label>
+          <select id="week">
+            <option>A</option><option>B</option><option>C</option><option>D</option>
+          </select>
+        </div>
+        <div>
+          <label>Duration</label>
+          <select id="duration">
+            <option value="60">60 min</option>
+            <option value="120">120 min</option>
+          </select>
+        </div>
+      </div>
+
+      <label style="margin-bottom:10px;display:block">Number of Lessons to Generate</label>
+      <div class="qty-row">
+        {% for n in [1,2,3,5,10] %}
+        <div class="qty-btn {% if n==3 %}active{% endif %}" data-value="{{ n }}" onclick="selectQty(this)">{{ n }}</div>
+        {% endfor %}
+      </div>
+
+      <button class="btn btn-primary" onclick="startRun()" id="startBtn">
+        ✨ Start Pipeline
+      </button>
+    </div>
+  </div>
+
+  <!-- Recent Runs -->
+  <div class="card">
+    <div class="card-header">
+      <div><h2>Recent Runs</h2><p>Click any run to continue or review</p></div>
+    </div>
+    <div class="card-body">
+      {% if runs %}
+      <div class="run-list">
+        {% for run in runs %}
+        <a href="/run/{{ run.run_id }}" class="run-item" style="text-decoration:none">
+          <div>
+            <div class="run-title">
+              {{ run.settings.get('strand','?') }} · {{ run.settings.get('level','?') }} · Week {{ run.settings.get('week','?') }}
+              — {{ run.topic_count }} topic(s)
+            </div>
+            <div class="run-meta">{{ run.run_id }} · {{ run.created_at[:16].replace('T',' ') }}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            {% if run.outputs_count %}<span style="font-size:12px;color:#64748b">{{ run.outputs_count }} PPTX ready</span>{% endif %}
+            <span class="status-pill s-{{ run.status.split('_')[0] }}">{{ run.status.replace('_',' ') }}</span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">No runs yet — start your first pipeline above.</div>
+      {% endif %}
+    </div>
+  </div>
+</main>
+
+<script>
+let selectedStrand = 'Language';
+let selectedQty = 3;
+
+const saved = localStorage.getItem('uklc_api_key');
+if (saved) { document.getElementById('apiKey').value = saved; document.getElementById('savedTag').style.display='block'; }
+
+document.getElementById('apiKey').addEventListener('input', e => {
+  if (e.target.value.startsWith('sk-')) {
+    localStorage.setItem('uklc_api_key', e.target.value);
+    document.getElementById('savedTag').style.display = 'block';
+  }
+});
+
+function selectStrand(el) {
+  document.querySelectorAll('.strand-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  selectedStrand = el.dataset.value;
+}
+
+function selectQty(el) {
+  document.querySelectorAll('.qty-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  selectedQty = parseInt(el.dataset.value);
+}
+
+async function startRun() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) { alert('Please enter your Anthropic API key.'); return; }
+
+  const btn = document.getElementById('startBtn');
+  btn.disabled = true;
+  btn.textContent = 'Starting…';
+
+  const resp = await fetch('/api/start', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      api_key:  key,
+      strand:   selectedStrand,
+      level:    document.getElementById('level').value,
+      week:     document.getElementById('week').value,
+      duration: document.getElementById('duration').value,
+      quantity: selectedQty
+    })
+  });
+  const data = await resp.json();
+  if (data.run_id) window.location = '/run/' + data.run_id;
+  else { alert(data.error || 'Error'); btn.disabled=false; btn.textContent='✨ Start Pipeline'; }
+}
+</script>
+</body>
+</html>
