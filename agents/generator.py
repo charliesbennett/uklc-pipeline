@@ -84,3 +84,5 @@ def generate_lesson(research, retries=4):
                 return None
 
     return None
+
+run = generate_lesson
