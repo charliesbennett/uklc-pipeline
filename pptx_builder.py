@@ -543,9 +543,14 @@ def build_lesson_pptx(lesson: dict, template_path: str) -> bytes:
         unpacked = os.path.join(tmpdir, 'unpacked')
 
         # 1. Unpack
-        subprocess.run(['python3', os.path.join(SCRIPTS_DIR,'office','unpack.py'),
-                        template_path, unpacked],
-                       check=True, capture_output=True)
+        r = subprocess.run(
+            ['python3', os.path.join(SCRIPTS_DIR, 'office', 'unpack.py'),
+             template_path, unpacked],
+            check=True, capture_output=True, text=True
+        )
+        print(f'[pptx_builder] unpack: {r.stdout.strip()}')
+        if r.stderr.strip():
+            print(f'[pptx_builder] unpack stderr: {r.stderr.strip()}')
 
         slides_dir   = os.path.join(unpacked, 'ppt', 'slides')
         prs_xml_path = os.path.join(unpacked, 'ppt', 'presentation.xml')
@@ -611,8 +616,10 @@ def build_lesson_pptx(lesson: dict, template_path: str) -> bytes:
         open(prs_xml_path,'w').write(prs_xml)
 
         # 7. Clean + Pack
-        subprocess.run(['python3', os.path.join(SCRIPTS_DIR,'clean.py'), unpacked],
-                       check=True, capture_output=True)
+        subprocess.run(
+            ['python3', os.path.join(SCRIPTS_DIR,'clean.py'), unpacked],
+            check=True, capture_output=True, text=True
+        )
 
         out = os.path.join(tmpdir, 'output.pptx')
         r = subprocess.run(
