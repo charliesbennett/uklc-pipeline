@@ -5,6 +5,7 @@ that fill gaps in the existing lesson library.
 """
 import json
 import os
+import re
 from pathlib import Path
 import anthropic
 
@@ -26,48 +27,55 @@ Your job is to brainstorm fresh lesson topic ideas that:
 Return ONLY valid JSON — no markdown, no explanation."""
 
 
-def run(strand: str, level: str, week: str, quantity: int) -> list:
+def run(strand: str, level: str, week: str, quantity: int, exclude: list = None) -> list:
     """Generate topic ideas and return a list of topic dicts."""
-    knowledge = json.loads(KNOWLEDGE_PATH.read_text())
-    existing = [
-        f"{l['title']} ({l['strand']}, {l['level']})"
-        for l in knowledge["lessons"]
-        if l["strand"] == {"Language": "LANG", "Leadership": "LEAD", "Culture": "CULT"}.get(strand, strand)
-    ]
-    gap_note = knowledge["gap_analysis"].get(level, "")
     type_label = {"Language": "LANG", "Leadership": "LEAD", "Culture": "CULT"}.get(strand, strand)
 
-    prompt = f"""Generate {quantity} fresh lesson topic ideas for:
-STRAND: {strand} ({type_label})
-LEVEL: {level}
-WEEK: {week}
-GAP NOTE: {gap_note}
+    # Load existing lessons to avoid duplicates
+    existing_titles = []
+    if KNOWLEDGE_PATH.exists():
+        try:
+            with open(KNOWLEDGE_PATH) as f:
+                lessons = json.load(f)
+            existing_titles = [l.get("lesson_title", "") for l in lessons]
+        except Exception:
+            pass
 
-EXISTING {type_label} LESSONS (do not duplicate these):
-{chr(10).join(existing) if existing else "None yet"}
+    if exclude:
+        existing_titles.extend(exclude)
 
-Return a JSON array of {quantity} objects:
+    exclude_block = ""
+    if existing_titles:
+        exclude_block = f"\nDo NOT suggest topics similar to: {', '.join(existing_titles[:30])}\n"
+
+    prompt = f"""Generate {quantity} fresh topic idea(s) for a PURPOSE {strand} lesson.
+
+SETTINGS:
+- Strand: {strand} ({type_label})
+- Level: {level}
+- Week: {week}
+- Quantity needed: {quantity}
+{exclude_block}
+Return a JSON array of {quantity} topic object(s):
 [
   {{
-    "title": "CATCHY ALL-CAPS TITLE (2-4 words, like AMONG US or THE SAUCE)",
-    "topic_summary": "One sentence describing what the lesson is about",
-    "why_it_fits": "One sentence on why this fits {strand} at {level}",
-    "main_task_type": "One of: Design & Create / Debate / Game / Role-Play / Presentation / Tech-Assisted",
+    "title": "SHORT PUNCHY TITLE IN CAPS",
+    "topic_summary": "One sentence: what students will do in this lesson.",
+    "why_it_fits": "One sentence: why this fits the strand and level.",
+    "main_task_type": "Role-Play / Debate / Presentation / Game / Quiz / Group Work",
     "vocabulary_angle": "What vocabulary area this covers",
-    "engagement_hook": "What makes this immediately interesting to 16-18 year olds",
-    "search_terms": ["3", "to", "5", "web search terms to research this topic"]
+    "engagement_hook": "What makes this exciting or relevant to 16-18 year olds",
+    "search_terms": ["3-5 web search terms to research this topic"]
   }}
-]
-
-Make all {quantity} topics genuinely different from each other and from existing lessons.
-Think about what 16-18 year olds find interesting in 2025: technology, identity, social media,
-culture clashes, real-world careers, ethical dilemmas, British life, global issues."""
+]"""
 
     resp = client.messages.create(
         model="claude-sonnet-4-20250514",
-        max_tokens=3000,
+        max_tokens=2000,
         system=SYSTEM,
         messages=[{"role": "user", "content": prompt}]
     )
-    raw = resp.content[0].text.strip().lstrip("```json").lstrip("```").rstrip("```")
+    raw = resp.content[0].text.strip()
+    raw = re.sub(r'^```(?:json)?\s*', '', raw)
+    raw = re.sub(r'\s*```$', '', raw)
     return json.loads(raw)
