@@ -36,10 +36,10 @@ CHARLIE'S STYLE: Task-based learning. Communicative approach. Visual and interac
 Students practise English while learning transferable life skills. Fun, relevant topics.
 Practical tasks. Discussion-heavy. Groups of 3 as default.
 
-LESSON ARC (use the research brief to populate ALL content):
+LESSON ARC — follow this EXACTLY, one slide per step (13 slides total):
 1. Hook (1 slide): Bold image + 1-2 questions from research
 2. Warm-up (1 slide): Simple 2-question discussion
-3. Info/Context (1-2 slides): Key facts from research brief
+3. Info/Context (1 slide): Key facts from research brief
 4. Vocabulary (1 slide): vocab_items from research
 5. Gap-fill (1 slide): gap_fill_sentences from research — SCRAMBLED
 6. Video placeholder (1 slide): video_suggestion from research
@@ -49,9 +49,12 @@ LESSON ARC (use the research brief to populate ALL content):
 10. Task Setup (1 slide): main_task_brief from research
 11. Task Structure (1 slide): how to do the task, NO timestamps
 12. Roles/Content (1 slide): character cards or task materials
-13. Feedback (1 slide): vote + max 3 criteria → END HERE
+13. Feedback (1 slide): vote + max 3 criteria
 
 CRITICAL RULES:
+- student_slides MUST contain EXACTLY 13 slides — no more, no fewer
+- Each slide maps to exactly one step in the arc above
+- Do NOT add extra slides, do NOT combine steps, do NOT split steps
 - Gap-fill MUST be scrambled (not sequential)
 - Games/quizzes: maximum 7 items
 - NO timestamps (0:00-0:15) on task structure slides
@@ -100,16 +103,88 @@ Return a JSON object:
     {{
       "slide_type": "hook",
       "title": "...",
-      "content": "content using research hook_image_idea",
-      "image_placeholder": "specific image from research",
+      "content": "Two questions using research context",
+      "image_placeholder": "specific image description from research",
       "activity_instruction": "Discuss in pairs - 2 minutes"
     }},
-    ... 13-16 slides following the arc above, using ALL research brief content ...
+    {{
+      "slide_type": "info",
+      "title": "Warm Up",
+      "content": "Two simple discussion questions",
+      "activity_instruction": "Talk to your partner"
+    }},
+    {{
+      "slide_type": "info",
+      "title": "Did You Know?",
+      "content": "3-4 key facts from research brief",
+      "activity_instruction": null
+    }},
+    {{
+      "slide_type": "vocab_intro",
+      "title": "Vocabulary",
+      "content": "word: definition\\nword: definition\\n... (all vocab items)",
+      "activity_instruction": "Match the words to the definitions"
+    }},
+    {{
+      "slide_type": "gap_fill",
+      "title": "Gap Fill",
+      "content": "Scrambled gap fill sentences from research (not in order)",
+      "activity_instruction": "Complete the sentences"
+    }},
+    {{
+      "slide_type": "video_placeholder",
+      "title": "Video",
+      "content": "Watch the video. What do you notice?",
+      "activity_instruction": null
+    }},
+    {{
+      "slide_type": "quiz",
+      "title": "Quiz Time!",
+      "content": "Q1: ...\\nQ2: ...\\n... (max 7 questions)",
+      "activity_instruction": "Answer in your teams"
+    }},
+    {{
+      "slide_type": "answers_hidden",
+      "title": "Answers",
+      "content": "1. answer\\n2. answer\\n...",
+      "activity_instruction": null
+    }},
+    {{
+      "slide_type": "discussion",
+      "title": "Discussion",
+      "content": "1. question\\n2. question\\n3. question\\n4. question\\n5. question",
+      "activity_instruction": "Discuss in groups of 3"
+    }},
+    {{
+      "slide_type": "task_setup",
+      "title": "[Task Name]",
+      "content": "Task brief from research — what students must do",
+      "activity_instruction": "You have 15 minutes"
+    }},
+    {{
+      "slide_type": "group_work",
+      "title": "How It Works",
+      "content": "Step-by-step task instructions (no timestamps)",
+      "activity_instruction": null
+    }},
+    {{
+      "slide_type": "task_content",
+      "title": "Your Materials",
+      "content": "Character cards / scenario cards / role cards from task brief",
+      "activity_instruction": null
+    }},
+    {{
+      "slide_type": "reflection",
+      "title": "Feedback",
+      "content": "Which group did best?\\nCriteria 1\\nCriteria 2\\nCriteria 3",
+      "activity_instruction": "Vote for the best group"
+    }}
   ],
   "materials_notes": "..."
 }}
 
-USE THE RESEARCH BRIEF — every slide should draw on the actual facts, vocabulary,
+IMPORTANT: student_slides must contain EXACTLY 13 slides following the arc above.
+USE THE RESEARCH BRIEF — every slide must draw on the actual facts, vocabulary,
 questions, and task brief from the research. Do not invent generic content."""
 
     resp = client.messages.create(
@@ -121,4 +196,10 @@ questions, and task brief from the research. Do not invent generic content."""
     raw = resp.content[0].text.strip()
     raw = re.sub(r'^```(?:json)?\s*', '', raw)
     raw = re.sub(r'\s*```$', '', raw)
-    return json.loads(raw)
+    lesson = json.loads(raw)
+
+    # Safety cap — never let more than 16 slides through to the builder
+    if len(lesson.get('student_slides', [])) > 16:
+        lesson['student_slides'] = lesson['student_slides'][:16]
+
+    return lesson
