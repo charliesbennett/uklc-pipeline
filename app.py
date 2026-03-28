@@ -26,7 +26,7 @@ OUTPUTS_DIR   = Path(__file__).parent / "outputs"
 OUTPUTS_DIR.mkdir(exist_ok=True)
 
 # ── SSE event streams ─────────────────────────────────────────────────────────
-_streams: dict[str, list] = {}  # run_id -> list of event strings
+_streams: dict[str, list] = {}
 
 def _push(run_id: str, event: str, data: dict):
     msg = f"event: {event}\ndata: {json.dumps(data)}\n\n"
@@ -71,7 +71,6 @@ def start():
     if not key:
         return jsonify({"error": "API key required"}), 400
     os.environ["ANTHROPIC_API_KEY"] = key
-
     settings = {
         "strand":   data.get("strand", "Language"),
         "level":    data.get("level", "Level 3"),
@@ -87,8 +86,7 @@ def start():
 def stream(run_id):
     return Response(_stream(run_id),
                     mimetype="text/event-stream",
-                    headers={"Cache-Control": "no-cache",
-                             "X-Accel-Buffering": "no"})
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.route("/api/state/<run_id>")
@@ -98,13 +96,12 @@ def get_state(run_id):
 
 @app.route("/api/approve-topics", methods=["POST"])
 def approve_topics():
-    data    = request.json
-    run_id  = data["run_id"]
-    indices = data["indices"]
-    # Guard: only allow if not already researching
-    state = sm.load(run_id)
+    data   = request.json
+    run_id = data["run_id"]
+    state  = sm.load(run_id)
     if state["status"] == "researching":
         return jsonify({"ok": True, "skipped": "already researching"})
+    indices = data["indices"]
     sm.approve_topics(run_id, indices)
     state = sm.load(run_id)
     key   = data.get("api_key", os.environ.get("ANTHROPIC_API_KEY", ""))
@@ -128,11 +125,43 @@ def regenerate_topics():
     return jsonify({"ok": True})
 
 
+@app.route("/api/regenerate-one-topic", methods=["POST"])
+def regenerate_one_topic():
+    """Replace a single topic idea at the given index, keeping all others."""
+    data   = request.json
+    run_id = data["run_id"]
+    index  = int(data["index"])
+    key    = data.get("api_key", os.environ.get("ANTHROPIC_API_KEY", ""))
+    if key:
+        os.environ["ANTHROPIC_API_KEY"] = key
+    state    = sm.load(run_id)
+    settings = state["settings"]
+    existing = state["topics"]
+
+    def _do_regen():
+        try:
+            new_topics = brainstorm.run(
+                strand   = settings["strand"],
+                level    = settings["level"],
+                week     = settings["week"],
+                quantity = 1,
+                exclude  = [t["title"] for t in existing]
+            )
+            if new_topics:
+                existing[index] = new_topics[0]
+                sm.set_topics(run_id, existing)
+                _push(run_id, "topic_replaced", {"index": index, "topic": new_topics[0]})
+        except Exception as e:
+            _push(run_id, "error", {"message": str(e)})
+
+    threading.Thread(target=_do_regen, daemon=True).start()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/approve-research", methods=["POST"])
 def approve_research():
     data   = request.json
     run_id = data["run_id"]
-    # Guard: only allow if awaiting research approval
     state  = sm.load(run_id)
     if state["status"] not in ("awaiting_research_approval",):
         return jsonify({"ok": True, "skipped": "not awaiting approval"})
@@ -156,7 +185,6 @@ def regenerate_lesson():
     if key:
         os.environ["ANTHROPIC_API_KEY"] = key
     state  = sm.load(run_id)
-    # Find the topic dict
     topic  = next((t for t in state["approved_topics"] if t["title"] == title), None)
     if not topic:
         return jsonify({"error": "Topic not found"}), 404
@@ -223,17 +251,14 @@ def _run_research(run_id: str, state: dict):
                                   "message": f"Researching {len(topics)} topic(s)…"})
         for i, topic in enumerate(topics):
             _push(run_id, "progress", {
-                "phase": "research",
-                "current": i + 1,
-                "total": len(topics),
-                "topic": topic["title"]
+                "phase": "research", "current": i + 1,
+                "total": len(topics), "topic": topic["title"]
             })
             brief = research.run(topic, settings["strand"], settings["level"])
             sm.set_research(run_id, topic["title"], brief)
             _push(run_id, "research_done", {"topic": topic["title"], "brief": brief})
             if i < len(topics) - 1:
-                time.sleep(2)  # avoid rate limiting between research calls
-
+                time.sleep(2)
         sm.set_status(run_id, "awaiting_research_approval")
         _push(run_id, "status", {"status": "awaiting_research_approval",
                                   "message": "Research complete — please review and approve."})
@@ -243,24 +268,21 @@ def _run_research(run_id: str, state: dict):
 
 
 def _run_single_lesson(run_id: str, topic: dict, brief: dict, settings: dict):
-    """Generate + review + build PPTX for a single lesson (used for regeneration)."""
+    """Generate + review + build PPTX for one lesson (regeneration)."""
     title = topic["title"]
     try:
         _push(run_id, "status", {"status": "generating",
                                   "message": f"Regenerating: {title}"})
-        _push(run_id, "progress", {"phase": "generate", "topic": title,
-                                    "current": 1, "total": 1})
+        _push(run_id, "progress", {"phase": "generate", "topic": title, "current": 1, "total": 1})
         lesson = generator.run(topic, brief, settings["strand"],
                                settings["level"], settings["week"])
         sm.set_lesson(run_id, title, lesson)
 
-        _push(run_id, "progress", {"phase": "review", "topic": title,
-                                    "current": 1, "total": 1})
+        _push(run_id, "progress", {"phase": "review", "topic": title, "current": 1, "total": 1})
         fixed = review.run(lesson)
         sm.set_reviewed(run_id, title, fixed)
 
-        _push(run_id, "progress", {"phase": "pptx", "topic": title,
-                                    "current": 1, "total": 1})
+        _push(run_id, "progress", {"phase": "pptx", "topic": title, "current": 1, "total": 1})
         pptx_bytes = build_lesson_pptx(fixed, TEMPLATE_PATH)
         tl   = settings["strand"][:4].upper()
         lv   = settings["level"].replace(" ", "")
@@ -268,16 +290,12 @@ def _run_single_lesson(run_id: str, topic: dict, brief: dict, settings: dict):
         slug = title.replace(" ", "_").upper()[:30]
         fname = f"PURPOSE_{wk}_{lv}_{tl}_{slug}.pptx"
         (OUTPUTS_DIR / fname).write_bytes(pptx_bytes)
-
         sm.set_output(run_id, title, fname)
         _push(run_id, "lesson_done", {
-            "topic": title,
-            "filename": fname,
+            "topic": title, "filename": fname,
             "slide_count": len(fixed.get("student_slides", [])) + 6,
-            "index": 1,
-            "total": 1
+            "index": 1, "total": 1
         })
-        # Restore complete status if all lessons are done
         state = sm.load(run_id)
         all_done = all(t["title"] in state.get("outputs", {})
                        for t in state["approved_topics"])
@@ -302,7 +320,6 @@ def _run_generate_all(run_id: str, state: dict):
             "status": "generating",
             "message": f"Generating lesson {i+1}/{len(topics)}: {title}"
         })
-
         try:
             _push(run_id, "progress", {"phase": "generate", "topic": title,
                                         "current": i+1, "total": len(topics)})
@@ -325,21 +342,16 @@ def _run_generate_all(run_id: str, state: dict):
             slug = title.replace(" ", "_").upper()[:30]
             fname = f"PURPOSE_{wk}_{lv}_{tl}_{slug}.pptx"
             (OUTPUTS_DIR / fname).write_bytes(pptx_bytes)
-
             sm.set_output(run_id, title, fname)
             _push(run_id, "lesson_done", {
-                "topic": title,
-                "filename": fname,
+                "topic": title, "filename": fname,
                 "slide_count": len(fixed.get("student_slides", [])) + 6,
-                "index": i + 1,
-                "total": len(topics)
+                "index": i + 1, "total": len(topics)
             })
-
         except Exception as e:
             sm.set_error(run_id, title, str(e))
             _push(run_id, "lesson_error", {"topic": title, "error": str(e)})
 
-        # Pause between lessons to avoid rate limiting
         if i < len(topics) - 1:
             time.sleep(5)
 
