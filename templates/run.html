@@ -20,7 +20,7 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
 .phase-desc{font-size:11px;margin-top:2px}
 .phase.done{background:#1a4a2e;}.phase.done .phase-label{color:#4ade80}.phase.done .phase-desc{color:#86efac}
 .phase.active{background:var(--purple);}.phase.active .phase-label{color:#fff}.phase.active .phase-desc{color:#d8b4fe}
-.phase.pending{}.phase.pending .phase-label{color:#475569}.phase.pending .phase-desc{color:#334155}
+.phase.pending .phase-label{color:#475569}.phase.pending .phase-desc{color:#334155}
 .phase.error{background:#4a1a1a;}.phase.error .phase-label{color:#f87171}.phase.error .phase-desc{color:#fca5a5}
 .settings-box{background:#243954;border-radius:9px;padding:12px 14px;margin-top:16px}
 .settings-box .sl{font-size:10px;color:#8fa8c0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:700}
@@ -32,13 +32,15 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
 .sec-title{font-family:'Raleway',sans-serif;font-size:15px;font-weight:800;color:var(--navy)}
 .sec-body{padding:22px}
 /* Topics */
-.topic-card{border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:.15s;position:relative;padding-right:120px}
+.topic-card{border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:.15s;position:relative;padding-right:130px}
 .topic-card:hover{border-color:var(--purple)}
 .topic-card.selected{border-color:var(--purple);background:#f5f0ff}
 .topic-card.loading{opacity:.6;pointer-events:none}
-.topic-card .check{position:absolute;top:14px;right:80px;width:22px;height:22px;border-radius:50%;border:2px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:12px;transition:.15s}
+.topic-card.custom-topic{border-style:dashed;border-color:var(--purple)}
+.topic-card.custom-topic.selected{background:#f5f0ff}
+.topic-card .check{position:absolute;top:14px;right:90px;width:22px;height:22px;border-radius:50%;border:2px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:12px;transition:.15s}
 .topic-card.selected .check{background:var(--purple);border-color:var(--purple);color:#fff}
-.topic-regen{position:absolute;top:10px;right:10px;background:transparent;border:1.5px solid #e2e8f0;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;font-family:inherit;transition:.2s}
+.topic-regen{position:absolute;top:10px;right:10px;background:transparent;border:1.5px solid #e2e8f0;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;font-family:inherit;transition:.2s;white-space:nowrap}
 .topic-regen:hover{border-color:var(--purple);color:var(--purple)}
 .topic-regen:disabled{opacity:.4;cursor:not-allowed}
 .topic-title{font-weight:700;color:var(--navy);font-size:14px;margin-bottom:4px}
@@ -48,6 +50,14 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
 .tag-type{background:var(--light);color:var(--navy)}
 .tag-hook{background:var(--pink);color:#c0152a}
 .tag-vocab{background:#ede9fe;color:#6d28d9}
+.tag-custom{background:#fef9c3;color:#854d0e}
+/* Custom topic input */
+.custom-topic-box{border:2px dashed #d1dde8;border-radius:10px;padding:18px;margin-bottom:10px;background:#f8fafc}
+.custom-topic-box h4{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px}
+.field-row{display:flex;gap:10px;margin-bottom:10px}
+.field-row input,.field-row textarea{flex:1;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--navy);resize:none;outline:none;transition:.15s}
+.field-row input:focus,.field-row textarea:focus{border-color:var(--purple)}
+.field-row textarea{height:60px}
 /* Research */
 .research-topic{border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:14px;overflow:hidden}
 .research-header{background:#f8fafc;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
@@ -79,9 +89,10 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
 .btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
 .btn-secondary{background:var(--light);color:var(--navy)}.btn-secondary:hover{background:#d1dde8}
 .btn-purple{background:var(--purple);color:#fff}.btn-purple:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(112,48,160,.35)}
+.btn-yellow{background:var(--yellow);color:var(--navy)}.btn-yellow:hover{transform:translateY(-1px)}
 .btn-outline{background:transparent;color:var(--purple);border:1.5px solid var(--purple)}.btn-outline:hover{background:#f5f0ff}
 .btn-outline:disabled{opacity:.4;cursor:not-allowed}
-.btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center}
 .btn-sm{padding:6px 12px;font-size:11px}
 .spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -121,6 +132,7 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
   </div>
   <div class="content">
     <div id="banner" class="banner banner-info" style="display:none"></div>
+
     <!-- STEP 1 -->
     <div class="section" id="sec-topics">
       <div class="sec-header">
@@ -133,6 +145,20 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
           Brainstorming topic ideas… <span class="dots"><span>.</span><span>.</span><span>.</span></span>
         </div>
         <div id="topics-list" style="display:none"></div>
+
+        <!-- Custom topic input -->
+        <div id="custom-topic-box" class="custom-topic-box" style="display:none">
+          <h4>✏️ Suggest your own topic</h4>
+          <div class="field-row">
+            <input type="text" id="custom-title" placeholder="Topic title, e.g. BODY LANGUAGE" maxlength="60">
+          </div>
+          <div class="field-row">
+            <textarea id="custom-context" placeholder="Optional: any context or notes for the AI (e.g. 'focus on job interviews, include role-play activity')"></textarea>
+          </div>
+          <button class="btn btn-yellow btn-sm" id="btn-add-custom" onclick="addCustomTopic()">+ Add My Topic</button>
+          <span id="custom-status" style="font-size:12px;color:#64748b;margin-left:10px"></span>
+        </div>
+
         <div class="btn-row" id="topics-actions" style="display:none">
           <button class="btn btn-primary" onclick="approveTopics()" id="btn-approve-topics">✓ Approve Selected</button>
           <button class="btn btn-secondary" onclick="regenerateTopics()" id="btn-regen-all">↺ Regenerate All</button>
@@ -140,6 +166,7 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
         </div>
       </div>
     </div>
+
     <!-- STEP 2 -->
     <div class="section" id="sec-research" style="display:none">
       <div class="sec-header">
@@ -157,6 +184,7 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
         </div>
       </div>
     </div>
+
     <!-- STEP 3-5 -->
     <div class="section" id="sec-generate" style="display:none">
       <div class="sec-header">
@@ -171,6 +199,7 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
         <div id="lessons-list"></div>
       </div>
     </div>
+
     <!-- Downloads -->
     <div class="section" id="sec-downloads" style="display:none">
       <div class="sec-header"><span class="sec-title">📥 Downloads</span></div>
@@ -192,17 +221,18 @@ let selectedIndices = new Set();
 let lessonPhases = {};
 let researchCount = 0;
 let totalTopics = 0;
+let renderedResearch = new Set(); // dedup research cards on SSE reconnect
 
 // ── SSE ───────────────────────────────────────────────────────────────────────
 const es = new EventSource(`/api/stream/${RUN_ID}`);
 es.addEventListener('status', e => { const d=JSON.parse(e.data); updateBanner(d.status,d.message); updateSidebar(d.status); });
 es.addEventListener('topics_ready', e => { renderTopics(JSON.parse(e.data).topics); });
-es.addEventListener('topic_replaced', e => {
-  const d = JSON.parse(e.data);
-  replaceTopicCard(d.index, d.topic);
-});
+es.addEventListener('topic_replaced', e => { const d=JSON.parse(e.data); replaceTopicCard(d.index, d.topic); });
+es.addEventListener('topic_added', e => { const d=JSON.parse(e.data); appendTopicCard(d.topic, d.index, true); });
 es.addEventListener('research_done', e => {
   const d = JSON.parse(e.data);
+  if (renderedResearch.has(d.topic)) return; // dedup on reconnect
+  renderedResearch.add(d.topic);
   researchCount++;
   renderResearchCard(d.topic, d.brief);
   document.getElementById('research-loading-text').textContent = `Researching topics… (${researchCount}/${totalTopics} done)`;
@@ -214,8 +244,8 @@ es.addEventListener('research_done', e => {
 });
 es.addEventListener('progress', e => {
   const d = JSON.parse(e.data);
-  const phaseLabel = {generate:'Generating',review:'Reviewing',pptx:'Building PPTX'}[d.phase]||d.phase;
-  document.getElementById('gen-label').textContent = `${phaseLabel} "${d.topic}" (${d.current}/${d.total})`;
+  const label = {generate:'Generating',review:'Reviewing',pptx:'Building PPTX'}[d.phase]||d.phase;
+  document.getElementById('gen-label').textContent = `${label} "${d.topic}" (${d.current}/${d.total})`;
   document.getElementById('gen-fill').style.width = (((d.current-1)*3+{generate:1,review:2,pptx:3}[d.phase])/(d.total*3)*100)+'%';
   document.getElementById('gen-progress-bar').style.display = 'block';
   updateLessonCard(d.topic, d.phase, 'active');
@@ -235,51 +265,65 @@ es.addEventListener('lesson_error', e => {
 });
 es.addEventListener('error', e => { try { const d=JSON.parse(e.data); showBanner('error','⚠️ '+d.message); } catch {} });
 
-// ── Topics ────────────────────────────────────────────────────────────────────
-function buildTopicCard(t, i) {
-  const isSelected = selectedIndices.has(i);
+// ── Topic cards ───────────────────────────────────────────────────────────────
+function buildTopicCard(t, i, isCustom=false) {
   const card = document.createElement('div');
-  card.className = `topic-card${isSelected ? ' selected' : ''}`;
+  card.className = `topic-card${selectedIndices.has(i)?' selected':''}${isCustom?' custom-topic':''}`;
   card.id = `topic-${i}`;
   card.onclick = (e) => { if (!e.target.classList.contains('topic-regen')) toggleTopic(i); };
+  const regenBtn = isCustom
+    ? `<button class="topic-regen" id="regen-topic-${i}" onclick="regenOneTopic(event,${i})">↺ New idea</button>`
+    : `<button class="topic-regen" id="regen-topic-${i}" onclick="regenOneTopic(event,${i})">↺ New idea</button>`;
   card.innerHTML = `
-    <button class="topic-regen" id="regen-topic-${i}" onclick="regenOneTopic(event,${i})">↺ New idea</button>
-    <div class="check" id="check-${i}">${isSelected ? '✓' : ''}</div>
-    <div class="topic-title">${t.title}</div>
-    <div class="topic-summary">${t.topic_summary}</div>
-    <div style="font-size:11px;color:#64748b;margin-bottom:8px">${t.why_it_fits}</div>
+    ${regenBtn}
+    <div class="check" id="check-${i}">${selectedIndices.has(i)?'✓':''}</div>
+    <div class="topic-title">${t.title}${isCustom?' <span class="tag tag-custom" style="font-size:9px;vertical-align:middle">YOUR TOPIC</span>':''}</div>
+    <div class="topic-summary">${t.topic_summary||''}</div>
+    <div style="font-size:11px;color:#64748b;margin-bottom:8px">${t.why_it_fits||''}</div>
     <div class="topic-tags">
-      <span class="tag tag-type">${t.main_task_type}</span>
-      <span class="tag tag-vocab">${t.vocabulary_angle}</span>
-      <span class="tag tag-hook">💡 ${t.engagement_hook.substring(0,50)}…</span>
+      <span class="tag tag-type">${t.main_task_type||''}</span>
+      <span class="tag tag-vocab">${(t.vocabulary_angle||'').substring(0,50)}</span>
+      ${t.engagement_hook?`<span class="tag tag-hook">💡 ${t.engagement_hook.substring(0,50)}…</span>`:''}
     </div>`;
   return card;
 }
 
 function renderTopics(data) {
   topics = data;
-  totalTopics = data.length;
   const list = document.getElementById('topics-list');
   list.innerHTML = '';
   data.forEach((t, i) => {
-    selectedIndices.add(i);
+    if (!selectedIndices.has(i)) selectedIndices.add(i);
     list.appendChild(buildTopicCard(t, i));
   });
   document.getElementById('topics-loading').style.display = 'none';
   document.getElementById('topics-list').style.display = 'block';
   document.getElementById('topics-actions').style.display = 'flex';
+  document.getElementById('custom-topic-box').style.display = 'block';
   document.getElementById('topics-badge').textContent = `${data.length} ideas generated`;
   updateSelCount();
 }
 
+function appendTopicCard(topic, index, isCustom=false) {
+  topics[index] = topic;
+  selectedIndices.add(index);
+  const list = document.getElementById('topics-list');
+  list.appendChild(buildTopicCard(topic, index, isCustom));
+  document.getElementById('topics-badge').textContent = `${topics.length} ideas`;
+  updateSelCount();
+  // Clear custom input
+  document.getElementById('custom-title').value = '';
+  document.getElementById('custom-context').value = '';
+  document.getElementById('custom-status').textContent = '';
+  document.getElementById('btn-add-custom').disabled = false;
+  document.getElementById('btn-add-custom').textContent = '+ Add My Topic';
+}
+
 function replaceTopicCard(index, topic) {
   topics[index] = topic;
-  // Restore selection state — keep selected if it was before
-  const wasSelected = selectedIndices.has(index);
   const list = document.getElementById('topics-list');
   const oldCard = document.getElementById(`topic-${index}`);
   const newCard = buildTopicCard(topic, index);
-  if (wasSelected) newCard.classList.add('selected');
   list.replaceChild(newCard, oldCard);
   updateSelCount();
 }
@@ -296,26 +340,13 @@ function updateSelCount() {
   document.getElementById('sel-count').textContent = `${selectedIndices.size} of ${topics.length} selected`;
 }
 
-async function regenOneTopic(e, index) {
-  e.stopPropagation();
-  const btn = document.getElementById(`regen-topic-${index}`);
-  btn.disabled = true; btn.textContent = '…';
-  const card = document.getElementById(`topic-${index}`);
-  card.classList.add('loading');
-
-  await fetch('/api/regenerate-one-topic', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({run_id:RUN_ID, index:index, api_key:API_KEY})
-  });
-  // Card will update via SSE topic_replaced event
-}
-
 // ── Actions ───────────────────────────────────────────────────────────────────
 async function approveTopics() {
   if (selectedIndices.size === 0) { alert('Please select at least one topic.'); return; }
   const btn = document.getElementById('btn-approve-topics');
   btn.disabled = true; btn.textContent = 'Approving…';
   totalTopics = selectedIndices.size;
+  document.getElementById('custom-topic-box').style.display = 'none';
   document.getElementById('sec-research').style.display = 'block';
   document.getElementById('topics-actions').style.display = 'none';
   await fetch('/api/approve-topics', {
@@ -328,11 +359,37 @@ async function regenerateTopics() {
   document.getElementById('topics-loading').style.display = 'flex';
   document.getElementById('topics-list').style.display = 'none';
   document.getElementById('topics-actions').style.display = 'none';
-  selectedIndices.clear();
+  document.getElementById('custom-topic-box').style.display = 'none';
+  selectedIndices.clear(); topics = [];
   await fetch('/api/regenerate-topics', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({run_id:RUN_ID, api_key:API_KEY})
   });
+}
+
+async function regenOneTopic(e, index) {
+  e.stopPropagation();
+  const btn = document.getElementById(`regen-topic-${index}`);
+  btn.disabled = true; btn.textContent = '…';
+  document.getElementById(`topic-${index}`).classList.add('loading');
+  await fetch('/api/regenerate-one-topic', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({run_id:RUN_ID, index:index, api_key:API_KEY})
+  });
+}
+
+async function addCustomTopic() {
+  const title = document.getElementById('custom-title').value.trim();
+  if (!title) { alert('Please enter a topic title.'); return; }
+  const context = document.getElementById('custom-context').value.trim();
+  const btn = document.getElementById('btn-add-custom');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  document.getElementById('custom-status').textContent = 'Claude is fleshing out your topic…';
+  await fetch('/api/add-custom-topic', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({run_id:RUN_ID, title:title, context:context, api_key:API_KEY})
+  });
+  // Card will appear via SSE topic_added event
 }
 
 async function approveResearch() {
@@ -372,6 +429,7 @@ function renderResearchCard(title, brief) {
   const list = document.getElementById('research-list');
   const card = document.createElement('div');
   card.className = 'research-topic';
+  card.id = `rc-${slugify(title)}`;
   const facts = (brief.key_facts||[]).map(f=>`<li>${f}</li>`).join('');
   const vocab = (brief.vocabulary_items||[]).slice(0,6).map(v=>
     `<div class="vocab-item"><div class="vocab-word">${v.word}</div><div class="vocab-def">${v.definition}</div></div>`
@@ -425,11 +483,11 @@ function updateLessonCard(title, phase, state, error='') {
   const statusEl = document.getElementById(`ls-${slug}`);
   if (statusEl) {
     if (error) statusEl.textContent = '⚠️ '+error.substring(0,100);
-    else statusEl.textContent = ({
+    else statusEl.textContent = (({
       generate:{active:'🔄 Generating lesson…',done:'Content generated'},
       review:{active:'🔍 Reviewing & fixing…',done:'Review complete'},
       pptx:{active:'📊 Building PPTX…',done:'✓ Complete'}
-    }[phase]||{})[state]||'';
+    }[phase]||{})[state])||'';
   }
   ['generate','review','pptx'].slice(0,['generate','review','pptx'].indexOf(phase)).forEach(p=>{
     const el = document.getElementById(`lph-${phMap[p]}-${slug}`);
@@ -458,9 +516,9 @@ function updateBanner(status, msg) {
   el.className = 'banner '+({complete:'banner-success',error:'banner-error',awaiting_topic_approval:'banner-warn',awaiting_research_approval:'banner-warn'}[status]||'banner-info');
   el.textContent = msg; el.style.display = 'block';
 }
-function showBanner(type,msg){updateBanner(type,msg);}
+function showBanner(t,m){updateBanner(t,m);}
 function updateSidebar(status) {
-  const map = {
+  const map={
     brainstorming:{brainstorm:'active',research:'pending',generate:'pending',review:'pending',pptx:'pending'},
     awaiting_topic_approval:{brainstorm:'done',research:'pending',generate:'pending',review:'pending',pptx:'pending'},
     researching:{brainstorm:'done',research:'active',generate:'pending',review:'pending',pptx:'pending'},
@@ -483,7 +541,7 @@ function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
     document.getElementById('research-loading').style.display='none';
     researchCount=Object.keys(state.research).length;
     totalTopics=state.approved_topics?.length||researchCount;
-    Object.entries(state.research).forEach(([t,b])=>renderResearchCard(t,b));
+    Object.entries(state.research).forEach(([t,b])=>{ renderedResearch.add(t); renderResearchCard(t,b); });
     if (state.status==='awaiting_research_approval') document.getElementById('research-actions').style.display='flex';
   }
   if (state.approved_topics?.length && Object.keys(state.lessons||{}).length) {
