@@ -71,12 +71,14 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
 .sec-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--purple);margin-bottom:6px}
 
 /* Lesson progress cards */
-.lesson-card{border:1.5px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.lesson-card{border:1.5px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .lesson-card.done{border-color:#86efac;background:#f0fdf4}
 .lesson-card.active{border-color:var(--purple);background:#f5f0ff}
 .lesson-card.error{border-color:#fca5a5;background:#fff5f5}
+.lesson-info{flex:1;min-width:0}
 .lesson-name{font-weight:700;color:var(--navy);font-size:13px}
 .lesson-status{font-size:11px;color:#64748b;margin-top:2px}
+.lesson-right{display:flex;gap:8px;align-items:center;flex-shrink:0}
 .lesson-phases{display:flex;gap:6px;align-items:center}
 .ph{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
 .ph-done{background:#dcfce7;color:#166534}
@@ -85,7 +87,7 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
 .ph-error{background:#fee2e2;color:#991b1b}
 
 /* Buttons */
-.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:.2s}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:.2s;text-decoration:none}
 .btn-primary{background:var(--red);color:#fff}
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(236,39,59,.35)}
 .btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
@@ -93,8 +95,11 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
 .btn-secondary:hover{background:#d1dde8}
 .btn-purple{background:var(--purple);color:#fff}
 .btn-purple:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(112,48,160,.35)}
+.btn-outline{background:transparent;color:var(--purple);border:1.5px solid var(--purple)}
+.btn-outline:hover{background:#f5f0ff}
+.btn-outline:disabled{opacity:.4;cursor:not-allowed}
 .btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
-.btn-sm{padding:7px 14px;font-size:12px}
+.btn-sm{padding:6px 12px;font-size:11px}
 
 /* Spinner / progress */
 .spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
@@ -197,7 +202,7 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
           <span id="research-loading-text">Researching topics…</span>
         </div>
         <div id="research-list"></div>
-        <div class="btn-row" id="research-actions">
+        <div class="btn-row" id="research-actions" style="display:none">
           <button class="btn btn-primary" onclick="approveResearch()" id="btn-approve-research">✓ Approve & Generate Lessons</button>
         </div>
       </div>
@@ -238,7 +243,7 @@ const RUN_ID = "{{ run_id }}";
 const API_KEY = localStorage.getItem('uklc_api_key') || '';
 let topics = [];
 let selectedIndices = new Set();
-let lessonPhases = {}; // topic -> {generate, review, pptx}
+let lessonPhases = {};
 let researchCount = 0;
 let totalTopics = 0;
 
@@ -284,11 +289,19 @@ es.addEventListener('lesson_done', e => {
   const d = JSON.parse(e.data);
   updateLessonCard(d.topic, 'pptx', 'done');
   addDownload(d.topic, d.filename, d.slide_count);
+  // Re-enable regenerate button after completion
+  const slug = slugify(d.topic);
+  const btn = document.getElementById(`btn-regen-${slug}`);
+  if (btn) { btn.disabled = false; btn.textContent = '↺ Regenerate'; }
 });
 
 es.addEventListener('lesson_error', e => {
   const d = JSON.parse(e.data);
   updateLessonCard(d.topic, 'generate', 'error', d.error);
+  // Re-enable regenerate button on error too
+  const slug = slugify(d.topic);
+  const btn = document.getElementById(`btn-regen-${slug}`);
+  if (btn) { btn.disabled = false; btn.textContent = '↺ Retry'; }
 });
 
 es.addEventListener('error', e => {
@@ -305,7 +318,7 @@ function renderTopics(data) {
   const list = document.getElementById('topics-list');
   list.innerHTML = '';
   data.forEach((t, i) => {
-    selectedIndices.add(i); // select all by default
+    selectedIndices.add(i);
     const card = document.createElement('div');
     card.className = 'topic-card selected';
     card.id = `topic-${i}`;
@@ -370,17 +383,41 @@ async function regenerateTopics() {
 }
 
 async function approveResearch() {
-  document.getElementById('btn-approve-research').disabled = true;
-  document.getElementById('btn-approve-research').textContent = 'Starting generation…';
+  const btn = document.getElementById('btn-approve-research');
+  btn.disabled = true; btn.textContent = 'Starting generation…';
   document.getElementById('sec-generate').style.display = 'block';
 
-  // Initialise lesson cards
   const state = await fetch(`/api/state/${RUN_ID}`).then(r=>r.json());
   state.approved_topics.forEach(t => initLessonCard(t.title));
 
   await fetch('/api/approve-research', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({run_id:RUN_ID, api_key:API_KEY})
+  });
+}
+
+async function regenerateLesson(title) {
+  const slug = slugify(title);
+  const btn = document.getElementById(`btn-regen-${slug}`);
+  btn.disabled = true; btn.textContent = 'Regenerating…';
+
+  // Reset the lesson card visually
+  updateLessonCard(title, 'generate', 'pending');
+  const card = document.getElementById(`lc-${slug}`);
+  if (card) card.className = 'lesson-card active';
+  document.getElementById(`ls-${slug}`).textContent = 'Queued for regeneration…';
+  ['gen','rev','pptx'].forEach(p => {
+    const el = document.getElementById(`lph-${p}-${slug}`);
+    if (el) el.className = 'ph ph-pending';
+  });
+
+  // Remove old download card if present
+  const oldDl = document.getElementById(`dl-${slug}`);
+  if (oldDl) oldDl.remove();
+
+  await fetch('/api/regenerate-lesson', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({run_id: RUN_ID, title: title, api_key: API_KEY})
   });
 }
 
@@ -412,18 +449,24 @@ function renderResearchCard(title, brief) {
 function initLessonCard(title) {
   lessonPhases[title] = {generate:'pending',review:'pending',pptx:'pending'};
   const list = document.getElementById('lessons-list');
+  // Don't duplicate
+  if (document.getElementById(`lc-${slugify(title)}`)) return;
   const card = document.createElement('div');
   card.className = 'lesson-card';
   card.id = `lc-${slugify(title)}`;
   card.innerHTML = `
-    <div>
+    <div class="lesson-info">
       <div class="lesson-name">${title}</div>
       <div class="lesson-status" id="ls-${slugify(title)}">Waiting…</div>
     </div>
-    <div class="lesson-phases">
-      <div class="ph ph-pending" id="lph-gen-${slugify(title)}" title="Generate">G</div>
-      <div class="ph ph-pending" id="lph-rev-${slugify(title)}" title="Review">R</div>
-      <div class="ph ph-pending" id="lph-pptx-${slugify(title)}" title="PPTX">P</div>
+    <div class="lesson-right">
+      <div class="lesson-phases">
+        <div class="ph ph-pending" id="lph-gen-${slugify(title)}" title="Generate">G</div>
+        <div class="ph ph-pending" id="lph-rev-${slugify(title)}" title="Review">R</div>
+        <div class="ph ph-pending" id="lph-pptx-${slugify(title)}" title="PPTX">P</div>
+      </div>
+      <button class="btn btn-outline btn-sm" id="btn-regen-${slugify(title)}"
+        onclick="regenerateLesson('${title.replace(/'/g,"\\'")}')">↺ Regenerate</button>
     </div>`;
   list.appendChild(card);
 }
@@ -432,23 +475,20 @@ function updateLessonCard(title, phase, state, error='') {
   const slug = slugify(title);
   const phMap = {generate:'gen',review:'rev',pptx:'pptx'};
   const phEl = document.getElementById(`lph-${phMap[phase]}-${slug}`);
-  if (phEl) {
-    phEl.className = `ph ph-${state}`;
-  }
+  if (phEl) phEl.className = `ph ph-${state}`;
   const card = document.getElementById(`lc-${slug}`);
   if (card) {
-    card.className = `lesson-card ${state === 'done' && phase === 'pptx' ? 'done' : state === 'error' ? 'error' : 'active'}`;
+    card.className = `lesson-card ${state === 'done' && phase === 'pptx' ? 'done' : state === 'error' ? 'error' : state === 'pending' ? '' : 'active'}`;
   }
   const statusEl = document.getElementById(`ls-${slug}`);
   if (statusEl) {
-    if (error) statusEl.textContent = '⚠️ ' + error.substring(0, 80);
+    if (error) statusEl.textContent = '⚠️ ' + error.substring(0, 100);
     else statusEl.textContent = {
-      generate: state==='active' ? '🔄 Generating lesson…' : 'Content generated',
-      review:   state==='active' ? '🔍 Reviewing & fixing…' : 'Review complete',
-      pptx:     state==='active' ? '📊 Building PPTX…' : '✓ Complete'
+      generate: state==='active' ? '🔄 Generating lesson…' : state==='done' ? 'Content generated' : '',
+      review:   state==='active' ? '🔍 Reviewing & fixing…' : state==='done' ? 'Review complete' : '',
+      pptx:     state==='active' ? '📊 Building PPTX…' : state==='done' ? '✓ Complete' : ''
     }[phase] || '';
   }
-  // Mark previous phases as done
   const order = ['generate','review','pptx'];
   const idx = order.indexOf(phase);
   order.slice(0, idx).forEach(p => {
@@ -460,8 +500,13 @@ function updateLessonCard(title, phase, state, error='') {
 function addDownload(title, filename, slideCount) {
   document.getElementById('sec-downloads').style.display = 'block';
   const list = document.getElementById('download-list');
+  const slug = slugify(title);
+  // Remove existing download card for this lesson if regenerated
+  const existing = document.getElementById(`dl-${slug}`);
+  if (existing) existing.remove();
   const card = document.createElement('div');
   card.className = 'dl-card';
+  card.id = `dl-${slug}`;
   card.innerHTML = `
     <div>
       <div class="dl-name">${title}</div>
@@ -486,9 +531,7 @@ function updateBanner(status, msg) {
   el.style.display = 'block';
 }
 
-function showBanner(type, msg) {
-  updateBanner(type, msg);
-}
+function showBanner(type, msg) { updateBanner(type, msg); }
 
 function updateSidebar(status) {
   const phases = {
@@ -528,20 +571,20 @@ function slugify(s) {
     }
   }
 
-  if (state.outputs && Object.keys(state.outputs).length) {
+  if (state.approved_topics?.length && Object.keys(state.lessons||{}).length) {
     document.getElementById('sec-generate').style.display = 'block';
-    document.getElementById('sec-downloads').style.display = 'block';
-    (state.approved_topics||[]).forEach(t => {
+    state.approved_topics.forEach(t => {
       initLessonCard(t.title);
-      const isDone = state.outputs[t.title];
-      if (isDone) {
+      if (state.outputs?.[t.title]) {
         updateLessonCard(t.title,'pptx','done');
         const lesson = state.reviewed?.[t.title] || state.lessons?.[t.title] || {};
         const slides = (lesson.student_slides||[]).length + 6;
         addDownload(t.title, state.outputs[t.title], slides);
+      } else if (state.errors?.[t.title]) {
+        updateLessonCard(t.title,'generate','error', state.errors[t.title]);
       }
     });
-    if (Object.keys(state.outputs).length > 1) {
+    if (Object.keys(state.outputs||{}).length > 1) {
       document.getElementById('dl-all-row').style.display = 'flex';
     }
   }
