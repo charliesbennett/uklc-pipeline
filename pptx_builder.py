@@ -3,7 +3,7 @@ UKLC Purpose Lesson PPTX Builder — v3
 Uses unpack/add_slide/pack scripts. Pure XML, no python-pptx shape API.
 
 Visual style: white background, text in rounded-rect boxes, UKLC brand colours.
-Slide count: 15-20 student slides per lesson.
+Slide count: 13-16 student slides per lesson.
 """
 import io, os, re, subprocess, tempfile
 
@@ -22,6 +22,8 @@ DGREY  = '444444'
 
 W = 12192000  # slide width  EMU
 H = 6858000   # slide height EMU
+
+MAX_STUDENT_SLIDES = 16  # hard cap — generator sometimes over-produces
 
 ACCENTS = {
     'hook': NAVY, 'debate': NAVY,
@@ -242,12 +244,9 @@ def _gen_slide_xml(sd, lesson_type='LANG'):
 
 def _build_hook(shapes, title, body, act, img):
     """Full-width image placeholder with title overlay at bottom."""
-    # Dark overlay bar at bottom
     shapes.append(_rect(0, H-2200000, W, 2200000, NAVY))
-    # Large image area
     shapes.append(_txt(380000, 200000, W-760000, H-2400000,
                        f'[IMAGE: {img or title}]', sz=1100, colour=GREY, align='ctr'))
-    # Title in overlay
     shapes.append(_txt(280000, H-2100000, W-560000, 700000,
                        title, sz=3200, bold=True, colour=YELLOW))
     if body:
@@ -264,7 +263,6 @@ def _build_debate(shapes, title, body, act, img):
     _header_bar(shapes, title, NAVY)
     _footer_bar(shapes, YELLOW)
     lines = [l.strip() for l in body.split('\n') if l.strip()]
-    # Find the split point — look for Group A / Group B
     mid = len(lines) // 2
     for i, l in enumerate(lines):
         if 'Group B' in l or 'DISAGREE' in l:
@@ -433,7 +431,6 @@ def _modify_slide1(xml, lesson):
     lv = lesson.get('level_label', 'Level 3')
     wk = lesson.get('week', 'A')
     meta = f'WEEK {wk} | PURPOSE | {tl} | {lv.upper()}'
-    # Title: sz=7000 rPr block, two paragraphs
     xml = re.sub(
         r'(<a:rPr[^>]*sz="7000"[^>]*>.*?</a:rPr>\s*<a:t>)([^<]*)(</a:t>)',
         lambda m: m.group(1) + _esc(title) + m.group(3),
@@ -476,7 +473,6 @@ def _find_step_groups_xml(xml):
     return re.findall(r'<p:grpSp>.*?</p:grpSp>', xml, re.DOTALL)
 
 def _modify_plan_xml(xml, steps):
-    # Replace step titles (e.g. "1. Introduction")
     for step in steps:
         header = f"{step['step_num']}. {step['title']}"
         xml = re.sub(
@@ -577,7 +573,7 @@ def build_lesson_pptx(lesson: dict, template_path: str) -> bytes:
             with open(p,'w') as fh: fh.write(transform(orig))
 
         # 4. Write first student slide into slide5.xml (blank placeholder)
-        student_slides = lesson.get('student_slides', [])
+        student_slides = lesson.get('student_slides', [])[:MAX_STUDENT_SLIDES]
         if student_slides:
             open(os.path.join(slides_dir,'slide5.xml'),'w').write(
                 _gen_slide_xml(student_slides[0]))
