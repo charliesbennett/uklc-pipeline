@@ -1,0 +1,52 @@
+{
+  "programme": "PURPOSE",
+  "age_range": "16-18",
+  "levels": {
+    "Level 1": "A1-A2",
+    "Level 2": "B1",
+    "Level 3": "B2-C1",
+    "Level 4": "C1-C2"
+  },
+  "strands": {
+    "CULT": "Culture - CLIL, British culture, history, arts, sciences",
+    "LANG": "Language - vocabulary, grammar, skills, functional language",
+    "LEAD": "Leadership - 21st century skills, teamwork, entrepreneurship, technology"
+  },
+  "lessons": [
+    {"title": "Fusion Menu", "strand": "CULT", "level": "Level 2", "week": "A", "topics": ["food", "culture", "design"], "task_type": "Design & Create"},
+    {"title": "Shogun", "strand": "CULT", "level": "Level 2", "week": "A", "topics": ["japanese culture", "history", "honour"], "task_type": "Design & Create"},
+    {"title": "Crazes", "strand": "CULT", "level": "Level 2", "week": "A", "topics": ["pop culture", "trends", "memes"], "task_type": "Game / Simulation"},
+    {"title": "TikTok Food", "strand": "CULT", "level": "Level 2", "week": "B", "topics": ["food", "social media", "viral content"], "task_type": "Tech-Assisted Creation"},
+    {"title": "British Nostalgia", "strand": "CULT", "level": "Level 3", "week": "A", "topics": ["british culture", "nostalgia", "history"], "task_type": "Discussion / Debate"},
+    {"title": "Victorian London", "strand": "CULT", "level": "Level 3", "week": "A", "topics": ["british history", "victorian era", "london"], "task_type": "Presentation"},
+    {"title": "Put the Kettle On", "strand": "CULT", "level": "Level 3", "week": "A", "topics": ["tea culture", "british customs", "food"], "task_type": "Discussion / Debate"},
+    {"title": "The Cultural Iceberg", "strand": "CULT", "level": "Level 3", "week": "B", "topics": ["intercultural communication", "culture theory", "identity"], "task_type": "Design & Create"},
+    {"title": "App Reviews", "strand": "LANG", "level": "Level 2", "week": "A", "topics": ["technology", "apps", "reviews", "opinions"], "task_type": "Research & Report"},
+    {"title": "Origin of Names", "strand": "LANG", "level": "Level 2", "week": "A", "topics": ["names", "etymology", "identity", "language history"], "task_type": "Research & Report"},
+    {"title": "The Cafe Problem", "strand": "LANG", "level": "Level 2", "week": "A", "topics": ["complaints", "annoyance", "functional language", "public spaces"], "task_type": "Game / Simulation"},
+    {"title": "Video Games", "strand": "LANG", "level": "Level 2", "week": "A", "topics": ["gaming", "technology", "opinions", "vocabulary"], "task_type": "Presentation"},
+    {"title": "Fairy Tales", "strand": "LANG", "level": "Level 3", "week": "A", "topics": ["storytelling", "register", "narrative", "creative writing"], "task_type": "Creative Writing"},
+    {"title": "Sarcasm", "strand": "LANG", "level": "Level 3", "week": "A", "topics": ["sarcasm", "humour", "pragmatics", "tone"], "task_type": "Role-Play"},
+    {"title": "AI Boom", "strand": "LANG", "level": "Level 3", "week": "A", "topics": ["AI", "technology", "future", "vocabulary"], "task_type": "Discussion / Debate"},
+    {"title": "AI Fakes", "strand": "LANG", "level": "Level 3", "week": "B", "topics": ["AI", "deepfakes", "media literacy", "misinformation"], "task_type": "Debate"},
+    {"title": "Brand Aid", "strand": "LEAD", "level": "Level 2", "week": "A", "topics": ["branding", "marketing", "design", "entrepreneurship"], "task_type": "Design & Create"},
+    {"title": "The Sauce", "strand": "LEAD", "level": "Level 2", "week": "A", "topics": ["food", "branding", "entrepreneurship", "pitching"], "task_type": "Design & Create"},
+    {"title": "Moltbook", "strand": "LEAD", "level": "Level 3", "week": "A", "topics": ["social media", "technology", "entrepreneurship", "strategy"], "task_type": "Design & Create"},
+    {"title": "Songs with Suno", "strand": "LEAD", "level": "Level 3", "week": "A", "topics": ["AI music", "creativity", "technology", "ethics"], "task_type": "Tech-Assisted Creation"},
+    {"title": "Podcasters", "strand": "LEAD", "level": "Level 3", "week": "A", "topics": ["podcasting", "media", "communication", "technology"], "task_type": "Tech-Assisted Creation"},
+    {"title": "WILTY", "strand": "LEAD", "level": "Level 3", "week": "A", "topics": ["game show", "persuasion", "public speaking", "creativity"], "task_type": "Game / Simulation"},
+    {"title": "Among Us", "strand": "LEAD", "level": "Level 3", "week": "A", "topics": ["games", "deception", "teamwork", "strategy"], "task_type": "Game / Simulation"},
+    {"title": "Drive Thru", "strand": "LEAD", "level": "Level 3", "week": "A", "topics": ["food service", "customer experience", "roleplay", "business"], "task_type": "Role-Play"},
+    {"title": "Live TV Selling", "strand": "LEAD", "level": "Level 3", "week": "B", "topics": ["selling", "persuasion", "pitching", "TV"], "task_type": "Role-Play"}
+  ],
+  "topic_themes_used": [
+    "food", "technology", "AI", "social media", "british culture", "history",
+    "games", "entrepreneurship", "media", "creativity", "identity", "ethics"
+  ],
+  "gap_analysis": {
+    "Level 1": "Completely undeveloped - needs all strands for Weeks A-D",
+    "Level 2": "Weeks B, C, D mostly empty - only Week A has lessons",
+    "Level 3": "Week B partially done - Weeks C, D empty",
+    "Level 4": "Completely undeveloped - needs all strands for Weeks A-D"
+  }
+}

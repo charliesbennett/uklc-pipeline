@@ -2,7 +2,5 @@ __pycache__/
 *.pyc
 state/
 outputs/
-knowledge/
-PURPOSE_Template_blank.pptx
 .env
 *.DS_Store
