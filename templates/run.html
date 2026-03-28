@@ -9,44 +9,40 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--navy:#1C3048;--red:#EC273B;--yellow:#F0F279;--purple:#7030A0;--pink:#FAD7D8;--light:#E6EEF3;--white:#fff}
 body{font-family:'Open Sans',sans-serif;background:#f0f4f8;min-height:100vh}
-
 header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between}
 .logo{color:var(--yellow);font-family:'Raleway',sans-serif;font-size:16px;font-weight:800;text-decoration:none}
 .back{color:#8fa8c0;font-size:12px;text-decoration:none;display:flex;align-items:center;gap:6px}
 .back:hover{color:#fff}
-
 .layout{display:grid;grid-template-columns:260px 1fr;gap:0;min-height:calc(100vh - 56px)}
-
-/* Sidebar */
 .sidebar{background:var(--navy);padding:24px 16px;border-right:1px solid #243954}
 .phase{padding:12px 14px;border-radius:9px;margin-bottom:6px;cursor:default;transition:.15s}
 .phase-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .phase-desc{font-size:11px;margin-top:2px}
 .phase.done{background:#1a4a2e;}.phase.done .phase-label{color:#4ade80}.phase.done .phase-desc{color:#86efac}
 .phase.active{background:var(--purple);}.phase.active .phase-label{color:#fff}.phase.active .phase-desc{color:#d8b4fe}
-.phase.pending{}.phase.pending .phase-label{color:#475569}.phase.pending .phase-desc{color:#334155}
+.phase.pending .phase-label{color:#475569}.phase.pending .phase-desc{color:#334155}
 .phase.error{background:#4a1a1a;}.phase.error .phase-label{color:#f87171}.phase.error .phase-desc{color:#fca5a5}
-
 .settings-box{background:#243954;border-radius:9px;padding:12px 14px;margin-top:16px}
 .settings-box .sl{font-size:10px;color:#8fa8c0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:700}
 .setting{display:flex;justify-content:space-between;margin-bottom:4px}
-.sk{font-size:11px;color:#8fa8c0}
-.sv{font-size:11px;color:#fff;font-weight:600}
-
-/* Main content */
+.sk{font-size:11px;color:#8fa8c0}.sv{font-size:11px;color:#fff;font-weight:600}
 .content{padding:28px;overflow-y:auto}
-
 .section{background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(28,48,72,.08);margin-bottom:20px;overflow:hidden}
 .sec-header{padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between}
 .sec-title{font-family:'Raleway',sans-serif;font-size:15px;font-weight:800;color:var(--navy)}
 .sec-body{padding:22px}
-
 /* Topics */
-.topic-card{border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:.15s;position:relative}
+.topic-card{border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:.15s;position:relative;padding-right:130px}
 .topic-card:hover{border-color:var(--purple)}
 .topic-card.selected{border-color:var(--purple);background:#f5f0ff}
-.topic-card .check{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;border:2px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:12px;transition:.15s}
+.topic-card.loading{opacity:.6;pointer-events:none}
+.topic-card.custom-topic{border-style:dashed;border-color:var(--purple)}
+.topic-card.custom-topic.selected{background:#f5f0ff}
+.topic-card .check{position:absolute;top:14px;right:90px;width:22px;height:22px;border-radius:50%;border:2px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:12px;transition:.15s}
 .topic-card.selected .check{background:var(--purple);border-color:var(--purple);color:#fff}
+.topic-regen{position:absolute;top:10px;right:10px;background:transparent;border:1.5px solid #e2e8f0;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;font-family:inherit;transition:.2s;white-space:nowrap}
+.topic-regen:hover{border-color:var(--purple);color:var(--purple)}
+.topic-regen:disabled{opacity:.4;cursor:not-allowed}
 .topic-title{font-weight:700;color:var(--navy);font-size:14px;margin-bottom:4px}
 .topic-summary{font-size:12px;color:#64748b;margin-bottom:8px}
 .topic-tags{display:flex;gap:6px;flex-wrap:wrap}
@@ -54,70 +50,62 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
 .tag-type{background:var(--light);color:var(--navy)}
 .tag-hook{background:var(--pink);color:#c0152a}
 .tag-vocab{background:#ede9fe;color:#6d28d9}
-
-/* Research cards */
+.tag-custom{background:#fef9c3;color:#854d0e}
+/* Custom topic input */
+.custom-topic-box{border:2px dashed #d1dde8;border-radius:10px;padding:18px;margin-bottom:10px;background:#f8fafc}
+.custom-topic-box h4{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px}
+.field-row{display:flex;gap:10px;margin-bottom:10px}
+.field-row input,.field-row textarea{flex:1;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--navy);resize:none;outline:none;transition:.15s}
+.field-row input:focus,.field-row textarea:focus{border-color:var(--purple)}
+.field-row textarea{height:60px}
+/* Research */
 .research-topic{border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:14px;overflow:hidden}
 .research-header{background:#f8fafc;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
 .research-header h4{font-weight:700;color:var(--navy);font-size:13px}
-.research-body{padding:16px;display:none}
-.research-body.open{display:block}
+.research-body{padding:16px;display:none}.research-body.open{display:block}
 .fact-list{list-style:none;margin-bottom:12px}
 .fact-list li{font-size:12px;color:#374151;padding:5px 0;border-bottom:1px solid #f1f5f9;padding-left:16px;position:relative}
 .fact-list li::before{content:'📊';position:absolute;left:0;font-size:10px;top:5px}
 .vocab-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:12px}
 .vocab-item{background:var(--light);border-radius:7px;padding:8px 10px}
-.vocab-word{font-weight:700;font-size:12px;color:var(--navy)}
-.vocab-def{font-size:11px;color:#64748b;margin-top:1px}
+.vocab-word{font-weight:700;font-size:12px;color:var(--navy)}.vocab-def{font-size:11px;color:#64748b;margin-top:1px}
 .sec-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--purple);margin-bottom:6px}
-
-/* Lesson progress cards */
-.lesson-card{border:1.5px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+/* Lesson cards */
+.lesson-card{border:1.5px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .lesson-card.done{border-color:#86efac;background:#f0fdf4}
 .lesson-card.active{border-color:var(--purple);background:#f5f0ff}
 .lesson-card.error{border-color:#fca5a5;background:#fff5f5}
+.lesson-info{flex:1;min-width:0}
 .lesson-name{font-weight:700;color:var(--navy);font-size:13px}
 .lesson-status{font-size:11px;color:#64748b;margin-top:2px}
+.lesson-right{display:flex;gap:8px;align-items:center;flex-shrink:0}
 .lesson-phases{display:flex;gap:6px;align-items:center}
 .ph{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
-.ph-done{background:#dcfce7;color:#166534}
-.ph-active{background:var(--purple);color:#fff}
-.ph-pending{background:#f1f5f9;color:#94a3b8}
-.ph-error{background:#fee2e2;color:#991b1b}
-
+.ph-done{background:#dcfce7;color:#166534}.ph-active{background:var(--purple);color:#fff}
+.ph-pending{background:#f1f5f9;color:#94a3b8}.ph-error{background:#fee2e2;color:#991b1b}
 /* Buttons */
-.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:.2s}
-.btn-primary{background:var(--red);color:#fff}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(236,39,59,.35)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:.2s;text-decoration:none}
+.btn-primary{background:var(--red);color:#fff}.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(236,39,59,.35)}
 .btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
-.btn-secondary{background:var(--light);color:var(--navy)}
-.btn-secondary:hover{background:#d1dde8}
-.btn-purple{background:var(--purple);color:#fff}
-.btn-purple:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(112,48,160,.35)}
-.btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
-.btn-sm{padding:7px 14px;font-size:12px}
-
-/* Spinner / progress */
+.btn-secondary{background:var(--light);color:var(--navy)}.btn-secondary:hover{background:#d1dde8}
+.btn-purple{background:var(--purple);color:#fff}.btn-purple:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(112,48,160,.35)}
+.btn-yellow{background:var(--yellow);color:var(--navy)}.btn-yellow:hover{transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--purple);border:1.5px solid var(--purple)}.btn-outline:hover{background:#f5f0ff}
+.btn-outline:disabled{opacity:.4;cursor:not-allowed}
+.btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center}
+.btn-sm{padding:6px 12px;font-size:11px}
 .spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
 .progress-bar{background:#e2e8f0;border-radius:4px;height:6px;overflow:hidden;margin:8px 0}
 .progress-fill{background:var(--purple);height:100%;border-radius:4px;transition:width .5s}
-
-/* Download area */
 .dl-card{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;margin-bottom:8px}
-.dl-name{font-weight:700;font-size:13px;color:var(--navy)}
-.dl-meta{font-size:11px;color:#64748b;margin-top:2px}
-
-/* Status banner */
+.dl-name{font-weight:700;font-size:13px;color:var(--navy)}.dl-meta{font-size:11px;color:#64748b;margin-top:2px}
 .banner{padding:12px 18px;border-radius:9px;font-size:13px;font-weight:600;margin-bottom:18px}
-.banner-info{background:#e0e7ff;color:#3730a3}
-.banner-success{background:#dcfce7;color:#166534}
-.banner-warn{background:#fef9c3;color:#854d0e}
-.banner-error{background:#fee2e2;color:#991b1b}
-
+.banner-info{background:#e0e7ff;color:#3730a3}.banner-success{background:#dcfce7;color:#166534}
+.banner-warn{background:#fef9c3;color:#854d0e}.banner-error{background:#fee2e2;color:#991b1b}
 .spinner-row{display:flex;align-items:center;gap:10px;color:#7030a0;font-size:13px;font-weight:600;padding:10px 0}
 .dots span{animation:blink 1.4s infinite;display:inline-block}
-.dots span:nth-child(2){animation-delay:.2s}
-.dots span:nth-child(3){animation-delay:.4s}
+.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
 @keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
 </style>
 </head>
@@ -126,31 +114,13 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
   <a href="/" class="logo">PURPOSE Pipeline</a>
   <a href="/" class="back">← All Runs</a>
 </header>
-
 <div class="layout">
-  <!-- Sidebar -->
   <div class="sidebar">
-    <div id="ph-brainstorm" class="phase active">
-      <div class="phase-label">1 · Brainstorm</div>
-      <div class="phase-desc">Generating topic ideas</div>
-    </div>
-    <div id="ph-research" class="phase pending">
-      <div class="phase-label">2 · Research</div>
-      <div class="phase-desc">Web search per topic</div>
-    </div>
-    <div id="ph-generate" class="phase pending">
-      <div class="phase-label">3 · Generate</div>
-      <div class="phase-desc">Build lesson content</div>
-    </div>
-    <div id="ph-review" class="phase pending">
-      <div class="phase-label">4 · Review</div>
-      <div class="phase-desc">Auto-fix & quality check</div>
-    </div>
-    <div id="ph-pptx" class="phase pending">
-      <div class="phase-label">5 · PPTX</div>
-      <div class="phase-desc">Build PowerPoint files</div>
-    </div>
-
+    <div id="ph-brainstorm" class="phase active"><div class="phase-label">1 · Brainstorm</div><div class="phase-desc">Generating topic ideas</div></div>
+    <div id="ph-research" class="phase pending"><div class="phase-label">2 · Research</div><div class="phase-desc">Web search per topic</div></div>
+    <div id="ph-generate" class="phase pending"><div class="phase-label">3 · Generate</div><div class="phase-desc">Build lesson content</div></div>
+    <div id="ph-review" class="phase pending"><div class="phase-label">4 · Review</div><div class="phase-desc">Auto-fix & quality check</div></div>
+    <div id="ph-pptx" class="phase pending"><div class="phase-label">5 · PPTX</div><div class="phase-desc">Build PowerPoint files</div></div>
     <div class="settings-box">
       <div class="sl">Run Settings</div>
       <div class="setting"><span class="sk">Run ID</span><span class="sv">{{ run_id }}</span></div>
@@ -160,12 +130,10 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
       <div class="setting"><span class="sk">Quantity</span><span class="sv">{{ state.settings.quantity }}</span></div>
     </div>
   </div>
-
-  <!-- Main content -->
   <div class="content">
     <div id="banner" class="banner banner-info" style="display:none"></div>
 
-    <!-- STEP 1: Topics -->
+    <!-- STEP 1 -->
     <div class="section" id="sec-topics">
       <div class="sec-header">
         <span class="sec-title">📋 Step 1 — Topic Ideas</span>
@@ -177,15 +145,29 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
           Brainstorming topic ideas… <span class="dots"><span>.</span><span>.</span><span>.</span></span>
         </div>
         <div id="topics-list" style="display:none"></div>
+
+        <!-- Custom topic input -->
+        <div id="custom-topic-box" class="custom-topic-box" style="display:none">
+          <h4>✏️ Suggest your own topic</h4>
+          <div class="field-row">
+            <input type="text" id="custom-title" placeholder="Topic title, e.g. BODY LANGUAGE" maxlength="60">
+          </div>
+          <div class="field-row">
+            <textarea id="custom-context" placeholder="Optional: any context or notes for the AI (e.g. 'focus on job interviews, include role-play activity')"></textarea>
+          </div>
+          <button class="btn btn-yellow btn-sm" id="btn-add-custom" onclick="addCustomTopic()">+ Add My Topic</button>
+          <span id="custom-status" style="font-size:12px;color:#64748b;margin-left:10px"></span>
+        </div>
+
         <div class="btn-row" id="topics-actions" style="display:none">
           <button class="btn btn-primary" onclick="approveTopics()" id="btn-approve-topics">✓ Approve Selected</button>
-          <button class="btn btn-secondary" onclick="regenerateTopics()" id="btn-regen">↺ Regenerate All</button>
+          <button class="btn btn-secondary" onclick="regenerateTopics()" id="btn-regen-all">↺ Regenerate All</button>
           <span id="sel-count" style="font-size:12px;color:#64748b;align-self:center"></span>
         </div>
       </div>
     </div>
 
-    <!-- STEP 2: Research -->
+    <!-- STEP 2 -->
     <div class="section" id="sec-research" style="display:none">
       <div class="sec-header">
         <span class="sec-title">🔍 Step 2 — Research Briefs</span>
@@ -197,13 +179,13 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
           <span id="research-loading-text">Researching topics…</span>
         </div>
         <div id="research-list"></div>
-        <div class="btn-row" id="research-actions">
+        <div class="btn-row" id="research-actions" style="display:none">
           <button class="btn btn-primary" onclick="approveResearch()" id="btn-approve-research">✓ Approve & Generate Lessons</button>
         </div>
       </div>
     </div>
 
-    <!-- STEP 3-5: Generation progress -->
+    <!-- STEP 3-5 -->
     <div class="section" id="sec-generate" style="display:none">
       <div class="sec-header">
         <span class="sec-title">⚙️ Steps 3–5 — Generate · Review · Build PPTX</span>
@@ -220,9 +202,7 @@ header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-item
 
     <!-- Downloads -->
     <div class="section" id="sec-downloads" style="display:none">
-      <div class="sec-header">
-        <span class="sec-title">📥 Downloads</span>
-      </div>
+      <div class="sec-header"><span class="sec-title">📥 Downloads</span></div>
       <div class="sec-body">
         <div id="download-list"></div>
         <div class="btn-row" id="dl-all-row" style="display:none">
@@ -238,94 +218,113 @@ const RUN_ID = "{{ run_id }}";
 const API_KEY = localStorage.getItem('uklc_api_key') || '';
 let topics = [];
 let selectedIndices = new Set();
-let lessonPhases = {}; // topic -> {generate, review, pptx}
+let lessonPhases = {};
 let researchCount = 0;
 let totalTopics = 0;
+let renderedResearch = new Set(); // dedup research cards on SSE reconnect
 
 // ── SSE ───────────────────────────────────────────────────────────────────────
 const es = new EventSource(`/api/stream/${RUN_ID}`);
-
-es.addEventListener('status', e => {
-  const d = JSON.parse(e.data);
-  updateBanner(d.status, d.message);
-  updateSidebar(d.status);
-});
-
-es.addEventListener('topics_ready', e => {
-  const d = JSON.parse(e.data);
-  renderTopics(d.topics);
-});
-
+es.addEventListener('status', e => { const d=JSON.parse(e.data); updateBanner(d.status,d.message); updateSidebar(d.status); });
+es.addEventListener('topics_ready', e => { renderTopics(JSON.parse(e.data).topics); });
+es.addEventListener('topic_replaced', e => { const d=JSON.parse(e.data); replaceTopicCard(d.index, d.topic); });
+es.addEventListener('topic_added', e => { const d=JSON.parse(e.data); appendTopicCard(d.topic, d.index, true); });
 es.addEventListener('research_done', e => {
   const d = JSON.parse(e.data);
+  if (renderedResearch.has(d.topic)) return; // dedup on reconnect
+  renderedResearch.add(d.topic);
   researchCount++;
   renderResearchCard(d.topic, d.brief);
-  document.getElementById('research-loading-text').textContent =
-    `Researching topics… (${researchCount}/${totalTopics} done)`;
+  document.getElementById('research-loading-text').textContent = `Researching topics… (${researchCount}/${totalTopics} done)`;
   document.getElementById('research-badge').textContent = `${researchCount}/${totalTopics}`;
   if (researchCount >= totalTopics) {
     document.getElementById('research-loading').style.display = 'none';
     document.getElementById('research-actions').style.display = 'flex';
   }
 });
-
 es.addEventListener('progress', e => {
   const d = JSON.parse(e.data);
-  const phaseLabel = {generate:'Generating',review:'Reviewing',pptx:'Building PPTX'}[d.phase] || d.phase;
-  document.getElementById('gen-label').textContent =
-    `${phaseLabel} "${d.topic}" (${d.current}/${d.total})`;
-  document.getElementById('gen-fill').style.width =
-    (((d.current-1) * 3 + {generate:1,review:2,pptx:3}[d.phase]) / (d.total * 3) * 100) + '%';
+  const label = {generate:'Generating',review:'Reviewing',pptx:'Building PPTX'}[d.phase]||d.phase;
+  document.getElementById('gen-label').textContent = `${label} "${d.topic}" (${d.current}/${d.total})`;
+  document.getElementById('gen-fill').style.width = (((d.current-1)*3+{generate:1,review:2,pptx:3}[d.phase])/(d.total*3)*100)+'%';
   document.getElementById('gen-progress-bar').style.display = 'block';
   updateLessonCard(d.topic, d.phase, 'active');
 });
-
 es.addEventListener('lesson_done', e => {
   const d = JSON.parse(e.data);
-  updateLessonCard(d.topic, 'pptx', 'done');
+  updateLessonCard(d.topic,'pptx','done');
   addDownload(d.topic, d.filename, d.slide_count);
+  const btn = document.getElementById(`btn-regen-lesson-${slugify(d.topic)}`);
+  if (btn) { btn.disabled=false; btn.textContent='↺ Regenerate'; }
 });
-
 es.addEventListener('lesson_error', e => {
   const d = JSON.parse(e.data);
-  updateLessonCard(d.topic, 'generate', 'error', d.error);
+  updateLessonCard(d.topic,'generate','error',d.error);
+  const btn = document.getElementById(`btn-regen-lesson-${slugify(d.topic)}`);
+  if (btn) { btn.disabled=false; btn.textContent='↺ Retry'; }
 });
+es.addEventListener('error', e => { try { const d=JSON.parse(e.data); showBanner('error','⚠️ '+d.message); } catch {} });
 
-es.addEventListener('error', e => {
-  try {
-    const d = JSON.parse(e.data);
-    showBanner('error', '⚠️ ' + d.message);
-  } catch {}
-});
+// ── Topic cards ───────────────────────────────────────────────────────────────
+function buildTopicCard(t, i, isCustom=false) {
+  const card = document.createElement('div');
+  card.className = `topic-card${selectedIndices.has(i)?' selected':''}${isCustom?' custom-topic':''}`;
+  card.id = `topic-${i}`;
+  card.onclick = (e) => { if (!e.target.classList.contains('topic-regen')) toggleTopic(i); };
+  const regenBtn = isCustom
+    ? `<button class="topic-regen" id="regen-topic-${i}" onclick="regenOneTopic(event,${i})">↺ New idea</button>`
+    : `<button class="topic-regen" id="regen-topic-${i}" onclick="regenOneTopic(event,${i})">↺ New idea</button>`;
+  card.innerHTML = `
+    ${regenBtn}
+    <div class="check" id="check-${i}">${selectedIndices.has(i)?'✓':''}</div>
+    <div class="topic-title">${t.title}${isCustom?' <span class="tag tag-custom" style="font-size:9px;vertical-align:middle">YOUR TOPIC</span>':''}</div>
+    <div class="topic-summary">${t.topic_summary||''}</div>
+    <div style="font-size:11px;color:#64748b;margin-bottom:8px">${t.why_it_fits||''}</div>
+    <div class="topic-tags">
+      <span class="tag tag-type">${t.main_task_type||''}</span>
+      <span class="tag tag-vocab">${(t.vocabulary_angle||'').substring(0,50)}</span>
+      ${t.engagement_hook?`<span class="tag tag-hook">💡 ${t.engagement_hook.substring(0,50)}…</span>`:''}
+    </div>`;
+  return card;
+}
 
-// ── Render Topics ─────────────────────────────────────────────────────────────
 function renderTopics(data) {
   topics = data;
-  totalTopics = data.length;
   const list = document.getElementById('topics-list');
   list.innerHTML = '';
   data.forEach((t, i) => {
-    selectedIndices.add(i); // select all by default
-    const card = document.createElement('div');
-    card.className = 'topic-card selected';
-    card.id = `topic-${i}`;
-    card.onclick = () => toggleTopic(i);
-    card.innerHTML = `
-      <div class="check" id="check-${i}">✓</div>
-      <div class="topic-title">${t.title}</div>
-      <div class="topic-summary">${t.topic_summary}</div>
-      <div style="font-size:11px;color:#64748b;margin-bottom:8px">${t.why_it_fits}</div>
-      <div class="topic-tags">
-        <span class="tag tag-type">${t.main_task_type}</span>
-        <span class="tag tag-vocab">${t.vocabulary_angle}</span>
-        <span class="tag tag-hook">💡 ${t.engagement_hook.substring(0,50)}…</span>
-      </div>`;
-    list.appendChild(card);
+    if (!selectedIndices.has(i)) selectedIndices.add(i);
+    list.appendChild(buildTopicCard(t, i));
   });
   document.getElementById('topics-loading').style.display = 'none';
   document.getElementById('topics-list').style.display = 'block';
   document.getElementById('topics-actions').style.display = 'flex';
+  document.getElementById('custom-topic-box').style.display = 'block';
   document.getElementById('topics-badge').textContent = `${data.length} ideas generated`;
+  updateSelCount();
+}
+
+function appendTopicCard(topic, index, isCustom=false) {
+  topics[index] = topic;
+  selectedIndices.add(index);
+  const list = document.getElementById('topics-list');
+  list.appendChild(buildTopicCard(topic, index, isCustom));
+  document.getElementById('topics-badge').textContent = `${topics.length} ideas`;
+  updateSelCount();
+  // Clear custom input
+  document.getElementById('custom-title').value = '';
+  document.getElementById('custom-context').value = '';
+  document.getElementById('custom-status').textContent = '';
+  document.getElementById('btn-add-custom').disabled = false;
+  document.getElementById('btn-add-custom').textContent = '+ Add My Topic';
+}
+
+function replaceTopicCard(index, topic) {
+  topics[index] = topic;
+  const list = document.getElementById('topics-list');
+  const oldCard = document.getElementById(`topic-${index}`);
+  const newCard = buildTopicCard(topic, index);
+  list.replaceChild(newCard, oldCard);
   updateSelCount();
 }
 
@@ -338,8 +337,7 @@ function toggleTopic(i) {
 }
 
 function updateSelCount() {
-  document.getElementById('sel-count').textContent =
-    `${selectedIndices.size} of ${topics.length} selected`;
+  document.getElementById('sel-count').textContent = `${selectedIndices.size} of ${topics.length} selected`;
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -347,11 +345,10 @@ async function approveTopics() {
   if (selectedIndices.size === 0) { alert('Please select at least one topic.'); return; }
   const btn = document.getElementById('btn-approve-topics');
   btn.disabled = true; btn.textContent = 'Approving…';
-
   totalTopics = selectedIndices.size;
+  document.getElementById('custom-topic-box').style.display = 'none';
   document.getElementById('sec-research').style.display = 'block';
   document.getElementById('topics-actions').style.display = 'none';
-
   await fetch('/api/approve-topics', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({run_id:RUN_ID, indices:[...selectedIndices], api_key:API_KEY})
@@ -362,25 +359,68 @@ async function regenerateTopics() {
   document.getElementById('topics-loading').style.display = 'flex';
   document.getElementById('topics-list').style.display = 'none';
   document.getElementById('topics-actions').style.display = 'none';
-  selectedIndices.clear();
+  document.getElementById('custom-topic-box').style.display = 'none';
+  selectedIndices.clear(); topics = [];
   await fetch('/api/regenerate-topics', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({run_id:RUN_ID, api_key:API_KEY})
   });
 }
 
-async function approveResearch() {
-  document.getElementById('btn-approve-research').disabled = true;
-  document.getElementById('btn-approve-research').textContent = 'Starting generation…';
-  document.getElementById('sec-generate').style.display = 'block';
+async function regenOneTopic(e, index) {
+  e.stopPropagation();
+  const btn = document.getElementById(`regen-topic-${index}`);
+  btn.disabled = true; btn.textContent = '…';
+  document.getElementById(`topic-${index}`).classList.add('loading');
+  await fetch('/api/regenerate-one-topic', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({run_id:RUN_ID, index:index, api_key:API_KEY})
+  });
+}
 
-  // Initialise lesson cards
+async function addCustomTopic() {
+  const title = document.getElementById('custom-title').value.trim();
+  if (!title) { alert('Please enter a topic title.'); return; }
+  const context = document.getElementById('custom-context').value.trim();
+  const btn = document.getElementById('btn-add-custom');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  document.getElementById('custom-status').textContent = 'Claude is fleshing out your topic…';
+  await fetch('/api/add-custom-topic', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({run_id:RUN_ID, title:title, context:context, api_key:API_KEY})
+  });
+  // Card will appear via SSE topic_added event
+}
+
+async function approveResearch() {
+  const btn = document.getElementById('btn-approve-research');
+  btn.disabled = true; btn.textContent = 'Starting generation…';
+  document.getElementById('sec-generate').style.display = 'block';
   const state = await fetch(`/api/state/${RUN_ID}`).then(r=>r.json());
   state.approved_topics.forEach(t => initLessonCard(t.title));
-
   await fetch('/api/approve-research', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({run_id:RUN_ID, api_key:API_KEY})
+  });
+}
+
+async function regenerateLesson(title) {
+  const slug = slugify(title);
+  const btn = document.getElementById(`btn-regen-lesson-${slug}`);
+  btn.disabled = true; btn.textContent = 'Regenerating…';
+  updateLessonCard(title,'generate','pending');
+  const card = document.getElementById(`lc-${slug}`);
+  if (card) card.className = 'lesson-card active';
+  document.getElementById(`ls-${slug}`).textContent = 'Queued for regeneration…';
+  ['gen','rev','pptx'].forEach(p => {
+    const el = document.getElementById(`lph-${p}-${slug}`);
+    if (el) el.className = 'ph ph-pending';
+  });
+  const oldDl = document.getElementById(`dl-${slug}`);
+  if (oldDl) oldDl.remove();
+  await fetch('/api/regenerate-lesson', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({run_id:RUN_ID, title:title, api_key:API_KEY})
   });
 }
 
@@ -389,41 +429,46 @@ function renderResearchCard(title, brief) {
   const list = document.getElementById('research-list');
   const card = document.createElement('div');
   card.className = 'research-topic';
+  card.id = `rc-${slugify(title)}`;
   const facts = (brief.key_facts||[]).map(f=>`<li>${f}</li>`).join('');
   const vocab = (brief.vocabulary_items||[]).slice(0,6).map(v=>
     `<div class="vocab-item"><div class="vocab-word">${v.word}</div><div class="vocab-def">${v.definition}</div></div>`
   ).join('');
   card.innerHTML = `
     <div class="research-header" onclick="this.nextElementSibling.classList.toggle('open')">
-      <h4>🔍 ${title}</h4>
-      <span style="font-size:12px;color:#64748b">Click to expand ▾</span>
+      <h4>🔍 ${title}</h4><span style="font-size:12px;color:#64748b">Click to expand ▾</span>
     </div>
     <div class="research-body">
       <div class="sec-label">Key Facts</div>
       <ul class="fact-list">${facts}</ul>
       <div class="sec-label">Vocabulary (${(brief.vocabulary_items||[]).length} items)</div>
       <div class="vocab-grid">${vocab}</div>
-      ${brief.video_suggestion ? `<div style="font-size:11px;color:#64748b;margin-top:8px">📹 Video: <em>${brief.video_suggestion}</em></div>` : ''}
+      ${brief.video_suggestion?`<div style="font-size:11px;color:#64748b;margin-top:8px">📹 Video: <em>${brief.video_suggestion}</em></div>`:''}
     </div>`;
   list.appendChild(card);
 }
 
-// ── Lesson progress cards ─────────────────────────────────────────────────────
+// ── Lesson cards ──────────────────────────────────────────────────────────────
 function initLessonCard(title) {
-  lessonPhases[title] = {generate:'pending',review:'pending',pptx:'pending'};
+  if (document.getElementById(`lc-${slugify(title)}`)) return;
   const list = document.getElementById('lessons-list');
   const card = document.createElement('div');
   card.className = 'lesson-card';
   card.id = `lc-${slugify(title)}`;
+  const safeTitle = title.replace(/'/g,"\\'");
   card.innerHTML = `
-    <div>
+    <div class="lesson-info">
       <div class="lesson-name">${title}</div>
       <div class="lesson-status" id="ls-${slugify(title)}">Waiting…</div>
     </div>
-    <div class="lesson-phases">
-      <div class="ph ph-pending" id="lph-gen-${slugify(title)}" title="Generate">G</div>
-      <div class="ph ph-pending" id="lph-rev-${slugify(title)}" title="Review">R</div>
-      <div class="ph ph-pending" id="lph-pptx-${slugify(title)}" title="PPTX">P</div>
+    <div class="lesson-right">
+      <div class="lesson-phases">
+        <div class="ph ph-pending" id="lph-gen-${slugify(title)}" title="Generate">G</div>
+        <div class="ph ph-pending" id="lph-rev-${slugify(title)}" title="Review">R</div>
+        <div class="ph ph-pending" id="lph-pptx-${slugify(title)}" title="PPTX">P</div>
+      </div>
+      <button class="btn btn-outline btn-sm" id="btn-regen-lesson-${slugify(title)}"
+        onclick="regenerateLesson('${safeTitle}')">↺ Regenerate</button>
     </div>`;
   list.appendChild(card);
 }
@@ -432,41 +477,34 @@ function updateLessonCard(title, phase, state, error='') {
   const slug = slugify(title);
   const phMap = {generate:'gen',review:'rev',pptx:'pptx'};
   const phEl = document.getElementById(`lph-${phMap[phase]}-${slug}`);
-  if (phEl) {
-    phEl.className = `ph ph-${state}`;
-  }
+  if (phEl) phEl.className = `ph ph-${state}`;
   const card = document.getElementById(`lc-${slug}`);
-  if (card) {
-    card.className = `lesson-card ${state === 'done' && phase === 'pptx' ? 'done' : state === 'error' ? 'error' : 'active'}`;
-  }
+  if (card) card.className = `lesson-card ${state==='done'&&phase==='pptx'?'done':state==='error'?'error':state==='pending'?'':'active'}`;
   const statusEl = document.getElementById(`ls-${slug}`);
   if (statusEl) {
-    if (error) statusEl.textContent = '⚠️ ' + error.substring(0, 80);
-    else statusEl.textContent = {
-      generate: state==='active' ? '🔄 Generating lesson…' : 'Content generated',
-      review:   state==='active' ? '🔍 Reviewing & fixing…' : 'Review complete',
-      pptx:     state==='active' ? '📊 Building PPTX…' : '✓ Complete'
-    }[phase] || '';
+    if (error) statusEl.textContent = '⚠️ '+error.substring(0,100);
+    else statusEl.textContent = (({
+      generate:{active:'🔄 Generating lesson…',done:'Content generated'},
+      review:{active:'🔍 Reviewing & fixing…',done:'Review complete'},
+      pptx:{active:'📊 Building PPTX…',done:'✓ Complete'}
+    }[phase]||{})[state])||'';
   }
-  // Mark previous phases as done
-  const order = ['generate','review','pptx'];
-  const idx = order.indexOf(phase);
-  order.slice(0, idx).forEach(p => {
+  ['generate','review','pptx'].slice(0,['generate','review','pptx'].indexOf(phase)).forEach(p=>{
     const el = document.getElementById(`lph-${phMap[p]}-${slug}`);
-    if (el) el.className = 'ph ph-done';
+    if (el) el.className='ph ph-done';
   });
 }
 
 function addDownload(title, filename, slideCount) {
   document.getElementById('sec-downloads').style.display = 'block';
+  const slug = slugify(title);
+  const existing = document.getElementById(`dl-${slug}`);
+  if (existing) existing.remove();
   const list = document.getElementById('download-list');
   const card = document.createElement('div');
-  card.className = 'dl-card';
+  card.className = 'dl-card'; card.id = `dl-${slug}`;
   card.innerHTML = `
-    <div>
-      <div class="dl-name">${title}</div>
-      <div class="dl-meta">${slideCount} slides · ${filename}</div>
-    </div>
+    <div><div class="dl-name">${title}</div><div class="dl-meta">${slideCount} slides · ${filename}</div></div>
     <a class="btn btn-primary btn-sm" href="/api/download/${RUN_ID}/${encodeURIComponent(title)}" download>⬇ Download</a>`;
   list.appendChild(card);
   document.getElementById('dl-all-row').style.display = 'flex';
@@ -475,85 +513,53 @@ function addDownload(title, filename, slideCount) {
 // ── UI helpers ────────────────────────────────────────────────────────────────
 function updateBanner(status, msg) {
   const el = document.getElementById('banner');
-  const cls = {
-    complete: 'banner-success',
-    error: 'banner-error',
-    awaiting_topic_approval: 'banner-warn',
-    awaiting_research_approval: 'banner-warn',
-  }[status] || 'banner-info';
-  el.className = 'banner ' + cls;
-  el.textContent = msg;
-  el.style.display = 'block';
+  el.className = 'banner '+({complete:'banner-success',error:'banner-error',awaiting_topic_approval:'banner-warn',awaiting_research_approval:'banner-warn'}[status]||'banner-info');
+  el.textContent = msg; el.style.display = 'block';
 }
-
-function showBanner(type, msg) {
-  updateBanner(type, msg);
-}
-
+function showBanner(t,m){updateBanner(t,m);}
 function updateSidebar(status) {
-  const phases = {
-    brainstorming: {brainstorm:'active',research:'pending',generate:'pending',review:'pending',pptx:'pending'},
-    awaiting_topic_approval: {brainstorm:'done',research:'pending',generate:'pending',review:'pending',pptx:'pending'},
-    researching: {brainstorm:'done',research:'active',generate:'pending',review:'pending',pptx:'pending'},
-    awaiting_research_approval: {brainstorm:'done',research:'done',generate:'pending',review:'pending',pptx:'pending'},
-    generating: {brainstorm:'done',research:'done',generate:'active',review:'active',pptx:'active'},
-    complete: {brainstorm:'done',research:'done',generate:'done',review:'done',pptx:'done'},
-    error: {brainstorm:'done',research:'done',generate:'error',review:'error',pptx:'error'},
-  }[status] || {};
-  Object.entries(phases).forEach(([ph,cls]) => {
-    const el = document.getElementById(`ph-${ph}`);
-    if (el) el.className = `phase ${cls}`;
-  });
+  const map={
+    brainstorming:{brainstorm:'active',research:'pending',generate:'pending',review:'pending',pptx:'pending'},
+    awaiting_topic_approval:{brainstorm:'done',research:'pending',generate:'pending',review:'pending',pptx:'pending'},
+    researching:{brainstorm:'done',research:'active',generate:'pending',review:'pending',pptx:'pending'},
+    awaiting_research_approval:{brainstorm:'done',research:'done',generate:'pending',review:'pending',pptx:'pending'},
+    generating:{brainstorm:'done',research:'done',generate:'active',review:'active',pptx:'active'},
+    complete:{brainstorm:'done',research:'done',generate:'done',review:'done',pptx:'done'},
+    error:{brainstorm:'done',research:'done',generate:'error',review:'error',pptx:'error'},
+  }[status]||{};
+  Object.entries(map).forEach(([ph,cls])=>{ const el=document.getElementById(`ph-${ph}`); if(el) el.className=`phase ${cls}`; });
 }
+function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
 
-function slugify(s) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g,'-');
-}
-
-// ── On load: restore state ────────────────────────────────────────────────────
-(async () => {
+// ── Restore state on load ─────────────────────────────────────────────────────
+(async()=>{
   const state = await fetch(`/api/state/${RUN_ID}`).then(r=>r.json());
   updateSidebar(state.status);
-
   if (state.topics?.length) renderTopics(state.topics);
-
   if (Object.keys(state.research||{}).length) {
-    document.getElementById('sec-research').style.display = 'block';
-    document.getElementById('research-loading').style.display = 'none';
-    researchCount = Object.keys(state.research).length;
-    totalTopics = state.approved_topics?.length || researchCount;
-    Object.entries(state.research).forEach(([t,b]) => renderResearchCard(t,b));
-    if (state.status === 'awaiting_research_approval') {
-      document.getElementById('research-actions').style.display = 'flex';
-    }
+    document.getElementById('sec-research').style.display='block';
+    document.getElementById('research-loading').style.display='none';
+    researchCount=Object.keys(state.research).length;
+    totalTopics=state.approved_topics?.length||researchCount;
+    Object.entries(state.research).forEach(([t,b])=>{ renderedResearch.add(t); renderResearchCard(t,b); });
+    if (state.status==='awaiting_research_approval') document.getElementById('research-actions').style.display='flex';
   }
-
-  if (state.outputs && Object.keys(state.outputs).length) {
-    document.getElementById('sec-generate').style.display = 'block';
-    document.getElementById('sec-downloads').style.display = 'block';
-    (state.approved_topics||[]).forEach(t => {
+  if (state.approved_topics?.length && Object.keys(state.lessons||{}).length) {
+    document.getElementById('sec-generate').style.display='block';
+    state.approved_topics.forEach(t=>{
       initLessonCard(t.title);
-      const isDone = state.outputs[t.title];
-      if (isDone) {
+      if (state.outputs?.[t.title]) {
         updateLessonCard(t.title,'pptx','done');
-        const lesson = state.reviewed?.[t.title] || state.lessons?.[t.title] || {};
-        const slides = (lesson.student_slides||[]).length + 6;
-        addDownload(t.title, state.outputs[t.title], slides);
+        const lesson=state.reviewed?.[t.title]||state.lessons?.[t.title]||{};
+        addDownload(t.title,state.outputs[t.title],(lesson.student_slides||[]).length+6);
+      } else if (state.errors?.[t.title]) {
+        updateLessonCard(t.title,'generate','error',state.errors[t.title]);
       }
     });
-    if (Object.keys(state.outputs).length > 1) {
-      document.getElementById('dl-all-row').style.display = 'flex';
-    }
+    if (Object.keys(state.outputs||{}).length>1) document.getElementById('dl-all-row').style.display='flex';
   }
-
-  if (state.status && state.status !== 'brainstorming') {
-    const msgs = {
-      awaiting_topic_approval: 'Topics ready — please review and approve below.',
-      awaiting_research_approval: 'Research complete — review briefs and approve to start generation.',
-      complete: '✓ All lessons generated successfully!',
-    };
-    if (msgs[state.status]) updateBanner(state.status, msgs[state.status]);
-  }
+  const msgs={awaiting_topic_approval:'Topics ready — please review and approve below.',awaiting_research_approval:'Research complete — review briefs and approve to start generation.',complete:'✓ All lessons generated successfully!'};
+  if (state.status&&msgs[state.status]) updateBanner(state.status,msgs[state.status]);
 })();
 </script>
 </body>
