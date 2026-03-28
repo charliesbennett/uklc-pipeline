@@ -5,14 +5,32 @@ research brief: real statistics, vocabulary, examples, activity ideas.
 """
 import json
 import os
+import re
 import anthropic
 
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
 
 SYSTEM = """You are a research assistant for a UKLC EFL lesson designer.
 You search the web and compile accurate, current information to help
-build engaging lessons for international students aged 16–18.
-Return ONLY valid JSON — no markdown, no explanation."""
+build engaging lessons for international students aged 16-18.
+Return ONLY valid JSON — no markdown, no explanation, no citation tags."""
+
+
+def _clean_json(text: str) -> str:
+    """Aggressively clean text to extract valid JSON."""
+    # Strip markdown code fences
+    text = re.sub(r'^```(?:json)?\s*', '', text.strip())
+    text = re.sub(r'\s*```$', '', text)
+    # Remove ALL XML/HTML tags including citation tags of any format
+    text = re.sub(r'<[^>]*>', '', text)
+    # Remove leftover closing tags with slashes
+    text = re.sub(r'</[^>]*>', '', text)
+    # Find the first { and last } to extract just the JSON object
+    start = text.find('{')
+    end   = text.rfind('}')
+    if start != -1 and end != -1:
+        text = text[start:end+1]
+    return text.strip()
 
 
 def run(topic: dict, strand: str, level: str) -> dict:
@@ -29,40 +47,31 @@ VOCABULARY ANGLE: {topic.get('vocabulary_angle', '')}
 
 Use web search to find current, real information. Search for: {', '.join(search_terms)}
 
-Return a JSON object:
+Return a JSON object with these exact keys:
 {{
   "topic_title": "{topic['title']}",
-  "key_facts": [
-    "3-5 specific, surprising, or striking REAL statistics or facts about this topic",
-    "These will appear on the info/context slide",
-    "Must be current (2022-2025 where possible) and engaging to teenagers"
-  ],
+  "key_facts": ["3-5 specific real statistics or facts, engaging to teenagers"],
   "vocabulary_items": [
-    {{"word": "...", "definition": "Clear, simple definition a B1-C1 student can understand"}},
-    "...6-8 items total..."
+    {{"word": "term", "definition": "clear simple definition"}},
+    "6-8 items total"
   ],
   "gap_fill_sentences": [
-    "6 sentences using the vocabulary, SCRAMBLED ORDER (not 1-2-3-4-5-6), each with ___ for the missing word",
-    "Include the answer in brackets at the end: (answer: word)"
+    "6 sentences with ___ gap, SCRAMBLED ORDER, answer in brackets: (answer: word)"
   ],
-  "discussion_questions": [
-    "5 open questions genuinely relevant to 16-18 year olds",
-    "Must feel personal and spark debate, not textbook-generic"
-  ],
+  "discussion_questions": ["5 open questions relevant to 16-18 year olds"],
   "main_task_brief": {{
-    "description": "Specific description of the main collaborative task",
+    "description": "specific collaborative task description",
     "groups": "groups of 3",
-    "output": "What tangible thing they produce or perform",
+    "output": "what they produce or perform",
     "duration_mins": 20
   }},
-  "video_suggestion": "Specific YouTube search term to find a relevant 2-4 minute clip",
-  "quiz_questions": [
-    {{"q": "Question?", "a": "Answer"}},
-    "...6-7 items..."
-  ],
-  "hook_image_idea": "Very specific description of the ideal opening image",
-  "cultural_notes": "Any UKLC-specific notes: nationality considerations, sensitivity flags, British culture connections"
-}}"""
+  "video_suggestion": "specific YouTube search term for a 2-4 minute clip",
+  "quiz_questions": [{{"q": "Question?", "a": "Answer"}}, "6-7 items"],
+  "hook_image_idea": "very specific opening image description",
+  "cultural_notes": "nationality considerations, sensitivity flags, British culture connections"
+}}
+
+CRITICAL: Return ONLY the raw JSON object. No prose before or after. No citation tags. No markdown fences."""
 
     resp = client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -72,29 +81,33 @@ Return a JSON object:
         tools=[{"type": "web_search_20250305", "name": "web_search"}]
     )
 
-    # Extract text content from response (may have tool use blocks)
-    text = ""
-    for block in resp.content:
-        if hasattr(block, "text"):
-            text += block.text
+    # Collect all text blocks from response
+    text_parts = [block.text for block in resp.content if hasattr(block, "text")]
+    text = " ".join(text_parts).strip()
 
-    # If no text yet (model used tool), make a follow-up without tools to synthesise
-    if not text.strip():
-        # Build a synthesis call with the search results
-        messages = [{"role": "user", "content": prompt}]
-        for block in resp.content:
-            if block.type == "tool_use":
-                messages.append({"role": "assistant", "content": resp.content})
-                messages.append({"role": "user", "content": "Now compile the research brief as JSON based on your search results."})
-                break
-
+    # If model only used tools and returned no text, do a synthesis call
+    if not text:
+        messages = [
+            {"role": "user", "content": prompt},
+            {"role": "assistant", "content": resp.content},
+            {"role": "user", "content": "Now return ONLY the raw JSON object. No prose, no citation tags, no markdown fences. Start your response with { and end with }."}
+        ]
         resp2 = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=4000,
             system=SYSTEM,
             messages=messages
         )
-        text = resp2.content[0].text
+        text = " ".join(
+            block.text for block in resp2.content if hasattr(block, "text")
+        ).strip()
 
-    raw = text.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
-    return json.loads(raw)
+    # Log raw text for debugging (first 500 chars)
+    print(f"[research] raw response start: {repr(text[:500])}", flush=True)
+
+    cleaned = _clean_json(text)
+
+    # Log cleaned text for debugging
+    print(f"[research] cleaned start: {repr(cleaned[:300])}", flush=True)
+
+    return json.loads(cleaned)
