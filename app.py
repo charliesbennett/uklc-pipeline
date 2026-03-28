@@ -101,8 +101,7 @@ def approve_topics():
     state  = sm.load(run_id)
     if state["status"] == "researching":
         return jsonify({"ok": True, "skipped": "already researching"})
-    indices = data["indices"]
-    sm.approve_topics(run_id, indices)
+    sm.approve_topics(run_id, data["indices"])
     state = sm.load(run_id)
     key   = data.get("api_key", os.environ.get("ANTHROPIC_API_KEY", ""))
     if key:
@@ -158,6 +157,41 @@ def regenerate_one_topic():
     return jsonify({"ok": True})
 
 
+@app.route("/api/add-custom-topic", methods=["POST"])
+def add_custom_topic():
+    """Add a user-supplied topic to the list, fleshed out by Claude."""
+    data    = request.json
+    run_id  = data["run_id"]
+    title   = data.get("title", "").strip()
+    context = data.get("context", "").strip()
+    if not title:
+        return jsonify({"error": "Title required"}), 400
+    key = data.get("api_key", os.environ.get("ANTHROPIC_API_KEY", ""))
+    if key:
+        os.environ["ANTHROPIC_API_KEY"] = key
+    state    = sm.load(run_id)
+    settings = state["settings"]
+    existing = list(state.get("topics", []))
+
+    def _do_add():
+        try:
+            topic = brainstorm.make_from_prompt(
+                title   = title,
+                context = context,
+                strand  = settings["strand"],
+                level   = settings["level"],
+                week    = settings["week"]
+            )
+            existing.append(topic)
+            sm.set_topics(run_id, existing)
+            _push(run_id, "topic_added", {"topic": topic, "index": len(existing) - 1})
+        except Exception as e:
+            _push(run_id, "error", {"message": str(e)})
+
+    threading.Thread(target=_do_add, daemon=True).start()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/approve-research", methods=["POST"])
 def approve_research():
     data   = request.json
@@ -177,7 +211,6 @@ def approve_research():
 
 @app.route("/api/regenerate-lesson", methods=["POST"])
 def regenerate_lesson():
-    """Regenerate a single lesson without affecting others."""
     data   = request.json
     run_id = data["run_id"]
     title  = data["title"]
@@ -202,8 +235,7 @@ def download(run_id, topic_slug):
     fname = state["outputs"].get(topic_slug)
     if not fname:
         return "Not found", 404
-    path = OUTPUTS_DIR / fname
-    return send_file(path, as_attachment=True)
+    return send_file(OUTPUTS_DIR / fname, as_attachment=True)
 
 
 @app.route("/api/download-all/<run_id>")
@@ -211,9 +243,8 @@ def download_all(run_id):
     import zipfile, io
     state   = sm.load(run_id)
     buf     = io.BytesIO()
-    outputs = state.get("outputs", {})
     with zipfile.ZipFile(buf, "w") as zf:
-        for slug, fname in outputs.items():
+        for slug, fname in state.get("outputs", {}).items():
             p = OUTPUTS_DIR / fname
             if p.exists():
                 zf.write(p, fname)
@@ -258,7 +289,7 @@ def _run_research(run_id: str, state: dict):
             sm.set_research(run_id, topic["title"], brief)
             _push(run_id, "research_done", {"topic": topic["title"], "brief": brief})
             if i < len(topics) - 1:
-                time.sleep(2)
+                time.sleep(15)  # avoid rate limiting between research calls
         sm.set_status(run_id, "awaiting_research_approval")
         _push(run_id, "status", {"status": "awaiting_research_approval",
                                   "message": "Research complete — please review and approve."})
@@ -268,14 +299,11 @@ def _run_research(run_id: str, state: dict):
 
 
 def _run_single_lesson(run_id: str, topic: dict, brief: dict, settings: dict):
-    """Generate + review + build PPTX for one lesson (regeneration)."""
     title = topic["title"]
     try:
-        _push(run_id, "status", {"status": "generating",
-                                  "message": f"Regenerating: {title}"})
+        _push(run_id, "status", {"status": "generating", "message": f"Regenerating: {title}"})
         _push(run_id, "progress", {"phase": "generate", "topic": title, "current": 1, "total": 1})
-        lesson = generator.run(topic, brief, settings["strand"],
-                               settings["level"], settings["week"])
+        lesson = generator.run(topic, brief, settings["strand"], settings["level"], settings["week"])
         sm.set_lesson(run_id, title, lesson)
 
         _push(run_id, "progress", {"phase": "review", "topic": title, "current": 1, "total": 1})
@@ -297,9 +325,7 @@ def _run_single_lesson(run_id: str, topic: dict, brief: dict, settings: dict):
             "index": 1, "total": 1
         })
         state = sm.load(run_id)
-        all_done = all(t["title"] in state.get("outputs", {})
-                       for t in state["approved_topics"])
-        if all_done:
+        if all(t["title"] in state.get("outputs", {}) for t in state["approved_topics"]):
             sm.set_status(run_id, "complete")
             _push(run_id, "status", {"status": "complete",
                                       "message": "All lessons generated successfully!"})
@@ -309,23 +335,19 @@ def _run_single_lesson(run_id: str, topic: dict, brief: dict, settings: dict):
 
 
 def _run_generate_all(run_id: str, state: dict):
-    """Generate + review + build PPTX for each approved topic, one at a time."""
     settings      = state["settings"]
     topics        = state["approved_topics"]
     research_data = state["research"]
 
     for i, topic in enumerate(topics):
         title = topic["title"]
-        _push(run_id, "status", {
-            "status": "generating",
-            "message": f"Generating lesson {i+1}/{len(topics)}: {title}"
-        })
+        _push(run_id, "status", {"status": "generating",
+                                  "message": f"Generating lesson {i+1}/{len(topics)}: {title}"})
         try:
             _push(run_id, "progress", {"phase": "generate", "topic": title,
                                         "current": i+1, "total": len(topics)})
-            brief  = research_data.get(title, {})
-            lesson = generator.run(topic, brief, settings["strand"],
-                                   settings["level"], settings["week"])
+            lesson = generator.run(topic, research_data.get(title, {}),
+                                   settings["strand"], settings["level"], settings["week"])
             sm.set_lesson(run_id, title, lesson)
 
             _push(run_id, "progress", {"phase": "review", "topic": title,
