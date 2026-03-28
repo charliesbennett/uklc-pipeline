@@ -5,22 +5,36 @@ Takes a research brief and settings, generates a complete lesson JSON.
 import json
 import os
 import re
+import time
 import anthropic
 
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
 
 
-# ── LEARNT FROM 24 REAL LESSONS ─────────────────────────────────────────
-# Slide counts: avg 16.5, min 7, max 30
-# Typical sequence: content → content → content → content → content → content → content → content → content → content → content → content → content → blank → content → content
-# Video placeholder present: 17% of lessons
-# Hidden answers present:    4% of lessons
-# Warm-up slide present:     29% of lessons
-# Reflection at end:         4% of lessons
-# Most common ending slide:  content
+def _api_call_with_retry(fn, max_retries=4):
+    """Call fn() with exponential backoff on rate limit errors."""
+    for attempt in range(max_retries):
+        try:
+            return fn()
+        except anthropic.RateLimitError:
+            if attempt == max_retries - 1:
+                raise
+            wait = 60 * (attempt + 1)
+            print(f"[generator] Rate limit hit, waiting {wait}s (attempt {attempt+1}/{max_retries})", flush=True)
+            time.sleep(wait)
+        except anthropic.APIStatusError as e:
+            if e.status_code == 429:
+                if attempt == max_retries - 1:
+                    raise
+                wait = 60 * (attempt + 1)
+                print(f"[generator] 429 error, waiting {wait}s (attempt {attempt+1}/{max_retries})", flush=True)
+                time.sleep(wait)
+            else:
+                raise
+
 
 SYSTEM_PROMPT = """You are an expert EFL curriculum designer for UKLC (UK Language Courses),
-a British summer school for international students aged 16–18.
+a British summer school for international students aged 16-18.
 
 PURPOSE PROGRAMME CONTEXT:
 - Ages 16-18, global citizens, maturing young adults
@@ -96,109 +110,43 @@ Return a JSON object:
     {{"step_num":1,"title":"Introduction","instructions":"Introduce the topic by activating Ss' schemata. Show the image on the next slide and ask the questions. Let Ss discuss in pairs for 2 minutes, then take whole-class feedback.","time_mins":5}},
     {{"step_num":2,"title":"[Input phase name]","instructions":"...using 'the next slide'...","time_mins":12}},
     {{"step_num":3,"title":"[Practice phase]","instructions":"...","time_mins":12}},
-    {{"step_num":4,"title":"[Main Task name]","instructions":"...reference 'the next slide'...practical note for shy students if relevant...","time_mins":20}},
-    {{"step_num":5,"title":"Feedback","instructions":"Groups share output. Class votes. Give language feedback. Award points for best performance.","time_mins":6}}
+    {{"step_num":4,"title":"[Main Task name]","instructions":"...reference 'the next slide'...","time_mins":20}},
+    {{"step_num":5,"title":"Feedback","instructions":"Groups share output. Class votes. Give language feedback.","time_mins":6}}
   ],
   "student_slides": [
-    {{
-      "slide_type": "hook",
-      "title": "...",
-      "content": "Two questions using research context",
-      "image_placeholder": "specific image description from research",
-      "activity_instruction": "Discuss in pairs - 2 minutes"
-    }},
-    {{
-      "slide_type": "info",
-      "title": "Warm Up",
-      "content": "Two simple discussion questions",
-      "activity_instruction": "Talk to your partner"
-    }},
-    {{
-      "slide_type": "info",
-      "title": "Did You Know?",
-      "content": "3-4 key facts from research brief",
-      "activity_instruction": null
-    }},
-    {{
-      "slide_type": "vocab_intro",
-      "title": "Vocabulary",
-      "content": "word: definition\\nword: definition\\n... (all vocab items)",
-      "activity_instruction": "Match the words to the definitions"
-    }},
-    {{
-      "slide_type": "gap_fill",
-      "title": "Gap Fill",
-      "content": "Scrambled gap fill sentences from research (not in order)",
-      "activity_instruction": "Complete the sentences"
-    }},
-    {{
-      "slide_type": "video_placeholder",
-      "title": "Video",
-      "content": "Watch the video. What do you notice?",
-      "activity_instruction": null
-    }},
-    {{
-      "slide_type": "quiz",
-      "title": "Quiz Time!",
-      "content": "Q1: ...\\nQ2: ...\\n... (max 7 questions)",
-      "activity_instruction": "Answer in your teams"
-    }},
-    {{
-      "slide_type": "answers_hidden",
-      "title": "Answers",
-      "content": "1. answer\\n2. answer\\n...",
-      "activity_instruction": null
-    }},
-    {{
-      "slide_type": "discussion",
-      "title": "Discussion",
-      "content": "1. question\\n2. question\\n3. question\\n4. question\\n5. question",
-      "activity_instruction": "Discuss in groups of 3"
-    }},
-    {{
-      "slide_type": "task_setup",
-      "title": "[Task Name]",
-      "content": "Task brief from research — what students must do",
-      "activity_instruction": "You have 15 minutes"
-    }},
-    {{
-      "slide_type": "group_work",
-      "title": "How It Works",
-      "content": "Step-by-step task instructions (no timestamps)",
-      "activity_instruction": null
-    }},
-    {{
-      "slide_type": "task_content",
-      "title": "Your Materials",
-      "content": "Character cards / scenario cards / role cards from task brief",
-      "activity_instruction": null
-    }},
-    {{
-      "slide_type": "reflection",
-      "title": "Feedback",
-      "content": "Which group did best?\\nCriteria 1\\nCriteria 2\\nCriteria 3",
-      "activity_instruction": "Vote for the best group"
-    }}
+    {{"slide_type":"hook","title":"...","content":"Two questions using research context","image_placeholder":"specific image description","activity_instruction":"Discuss in pairs - 2 minutes"}},
+    {{"slide_type":"info","title":"Warm Up","content":"Two simple discussion questions","activity_instruction":"Talk to your partner"}},
+    {{"slide_type":"info","title":"Did You Know?","content":"3-4 key facts from research brief","activity_instruction":null}},
+    {{"slide_type":"vocab_intro","title":"Vocabulary","content":"word: definition\\nword: definition\\n...","activity_instruction":"Match the words to the definitions"}},
+    {{"slide_type":"gap_fill","title":"Gap Fill","content":"Scrambled gap fill sentences from research","activity_instruction":"Complete the sentences"}},
+    {{"slide_type":"video_placeholder","title":"Video","content":"Watch the video. What do you notice?","activity_instruction":null}},
+    {{"slide_type":"quiz","title":"Quiz Time!","content":"Q1: ...\\nQ2: ...\\n... (max 7 questions)","activity_instruction":"Answer in your teams"}},
+    {{"slide_type":"answers_hidden","title":"Answers","content":"1. answer\\n2. answer\\n...","activity_instruction":null}},
+    {{"slide_type":"discussion","title":"Discussion","content":"1. question\\n2. question\\n3. question\\n4. question\\n5. question","activity_instruction":"Discuss in groups of 3"}},
+    {{"slide_type":"task_setup","title":"[Task Name]","content":"Task brief from research","activity_instruction":"You have 15 minutes"}},
+    {{"slide_type":"group_work","title":"How It Works","content":"Step-by-step task instructions (no timestamps)","activity_instruction":null}},
+    {{"slide_type":"task_content","title":"Your Materials","content":"Character cards / scenario cards from task brief","activity_instruction":null}},
+    {{"slide_type":"reflection","title":"Feedback","content":"Which group did best?\\nCriteria 1\\nCriteria 2\\nCriteria 3","activity_instruction":"Vote for the best group"}}
   ],
   "materials_notes": "..."
 }}
 
-IMPORTANT: student_slides must contain EXACTLY 13 slides following the arc above.
-USE THE RESEARCH BRIEF — every slide must draw on the actual facts, vocabulary,
-questions, and task brief from the research. Do not invent generic content."""
+IMPORTANT: student_slides must contain EXACTLY 13 slides.
+USE THE RESEARCH BRIEF — every slide must draw on the actual content from the research."""
 
-    resp = client.messages.create(
+    resp = _api_call_with_retry(lambda: client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=8000,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}]
-    )
+    ))
+
     raw = resp.content[0].text.strip()
     raw = re.sub(r'^```(?:json)?\s*', '', raw)
     raw = re.sub(r'\s*```$', '', raw)
     lesson = json.loads(raw)
 
-    # Safety cap — never let more than 16 slides through to the builder
+    # Safety cap
     if len(lesson.get('student_slides', [])) > 16:
         lesson['student_slides'] = lesson['student_slides'][:16]
 
