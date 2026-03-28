@@ -2,58 +2,16 @@
 UKLC Lesson Pipeline — Flask App
 Multi-agent pipeline: Brainstorm → Research → Generate → Review → PPTX
 """
-import sys
-print("=== STARTING IMPORT DIAGNOSTICS ===", flush=True)
+import json
+import os
+import threading
+import time
+from pathlib import Path
+from flask import Flask, render_template, request, jsonify, Response, send_file
 
-try:
-    import json; print("json OK", flush=True)
-    import os; print("os OK", flush=True)
-    import threading; print("threading OK", flush=True)
-    import time; print("time OK", flush=True)
-    from pathlib import Path; print("pathlib OK", flush=True)
-    from flask import Flask, render_template, request, jsonify, Response, send_file
-    print("flask OK", flush=True)
-except Exception as e:
-    print(f"STDLIB/FLASK IMPORT FAILED: {e}", flush=True)
-    sys.exit(1)
-
-try:
-    import state_manager as sm; print("state_manager OK", flush=True)
-except Exception as e:
-    print(f"STATE_MANAGER FAILED: {e}", flush=True)
-    sys.exit(1)
-
-try:
-    from agents import brainstorm; print("brainstorm OK", flush=True)
-except Exception as e:
-    print(f"BRAINSTORM FAILED: {e}", flush=True)
-    sys.exit(1)
-
-try:
-    from agents import research; print("research OK", flush=True)
-except Exception as e:
-    print(f"RESEARCH FAILED: {e}", flush=True)
-    sys.exit(1)
-
-try:
-    from agents import generator; print("generator OK", flush=True)
-except Exception as e:
-    print(f"GENERATOR FAILED: {e}", flush=True)
-    sys.exit(1)
-
-try:
-    from agents import review; print("review OK", flush=True)
-except Exception as e:
-    print(f"REVIEW FAILED: {e}", flush=True)
-    sys.exit(1)
-
-try:
-    from pptx_builder import build_lesson_pptx; print("pptx_builder OK", flush=True)
-except Exception as e:
-    print(f"PPTX_BUILDER FAILED: {e}", flush=True)
-    sys.exit(1)
-
-print("=== ALL IMPORTS OK ===", flush=True)
+import state_manager as sm
+from agents import brainstorm, research, generator, review
+from pptx_builder import build_lesson_pptx
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -85,6 +43,12 @@ def _stream(run_id: str):
         if state["status"] in ("complete", "error"):
             break
         time.sleep(0.4)
+
+
+# ── Health check ──────────────────────────────────────────────────────────────
+@app.route("/health")
+def health():
+    return "OK", 200
 
 
 # ── Pages ─────────────────────────────────────────────────────────────────────
