@@ -86,3 +86,13 @@ def generate_lesson(research, retries=4):
     return None
 
 run = generate_lesson
+
+
+def run(topic, brief, strand, level, week):
+    """Wrapper matching app.py call signature."""
+    research = dict(brief) if brief else {}
+    research['topic_title'] = topic
+    research['strand'] = strand
+    research['level'] = level
+    research['week'] = week
+    return generate_lesson(research)
