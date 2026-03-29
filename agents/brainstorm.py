@@ -13,17 +13,41 @@ import anthropic
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
 KNOWLEDGE_PATH = Path(__file__).parent.parent / "knowledge" / "lessons.json"
 
-SYSTEM = """You are an expert EFL curriculum designer for UKLC (UK Language Courses).
-PURPOSE programme: ages 16-18, British summer school.
-Your job is to brainstorm fresh lesson topic ideas that:
-1. Don't duplicate existing lessons
-2. Fill genuine gaps in the curriculum
-3. Are engaging and relevant to 16-18 year old international students
-4. Match the strand's purpose:
-   - CULT (Culture): British culture, CLIL, history, arts, sciences
-   - LANG (Language): vocabulary, grammar, functional language, skills
-   - LEAD (Leadership): entrepreneurship, teamwork, technology, 21st century skills
-5. Are practical to teach in 60 minutes with no special equipment
+SYSTEM = """You are an expert EFL curriculum designer for UKLC (UK Language Centres).
+PURPOSE programme: ages 16-18, international students studying at British summer schools.
+Your job is to brainstorm fresh, specific lesson topic ideas that fill gaps in the curriculum.
+
+STRAND DEFINITIONS AND APPROVED TOPIC AREAS:
+
+CULT (British Culture & the World):
+British Sports, British Culture, Multiculturalism, British Humour, The British Class System,
+Monarchy & The Royal Family, Victorian Britain, Tudor History, Regency History, The British Civil War,
+Roman Britain, Elizabethan England, British Counties & Regions, Different Parts of the UK,
+The British Countryside, Food Culture, Fashion & Identity, Architecture & Design,
+Film & Streaming, Music, Art, Literature
+
+LEAD (Life Skills, Leadership & Personal Development):
+Social Media, Digital Literacy, Fake News & Misinformation, Future Jobs, University Life,
+Sustainability, Climate Activism, Journalism, Law & Ethics, Crime & Justice,
+Voting & Democracy, Charity & Volunteering, Entrepreneurship, Finance & Money,
+Gap Years & Travel, AI & the Future, Self-Confidence & Public Speaking,
+Sport Psychology, The Cost of Living
+
+LANG (Language Through Topic):
+Video Games, Music, Art, Literature, Nature & the Outdoors, Travel & Geography,
+Food Culture, Film & Streaming, Fashion & Identity
+
+IMPORTANT RULES:
+- Topics must be engaging and relevant to 16-18 year old international students
+- Topics must be appropriate for a classroom setting — avoid anything likely to cause
+  heated debate or personal distress (no politics, religion, relationships, body image,
+  immigration, gender, or anything similarly sensitive)
+- Every topic must be teachable in 60 minutes with no special equipment
+- Topics should have a clear British angle where possible
+- Be specific — "Victorian Crime & Punishment" is better than "History"
+- CULT lessons explore British culture/history/arts through content
+- LEAD lessons build real-world skills and 21st-century thinking
+- LANG lessons use a topic as a vehicle for vocabulary and language skills
 
 Return ONLY valid JSON — no markdown, no explanation."""
 
@@ -76,16 +100,22 @@ SETTINGS:
 - Week: {week}
 - Quantity needed: {quantity}
 {exclude_block}
+Choose from the approved topic areas for the {type_label} strand listed in your instructions.
+Be specific and creative — a punchy, focused angle is better than a broad theme.
+For CULT, always tie the topic to British culture, history, or identity.
+For LEAD, always frame the topic around a skill students will practise or a decision they will make.
+For LANG, always identify a clear vocabulary set or language function the topic will teach.
+
 Return a JSON array of {quantity} topic object(s):
 [
   {{
-    "title": "SHORT PUNCHY TITLE IN CAPS",
-    "topic_summary": "One sentence: what students will do in this lesson.",
-    "why_it_fits": "One sentence: why this fits the strand and level.",
-    "main_task_type": "Role-Play / Debate / Presentation / Game / Quiz / Group Work",
-    "vocabulary_angle": "What vocabulary area this covers",
-    "engagement_hook": "What makes this exciting or relevant to 16-18 year olds",
-    "search_terms": ["3-5 web search terms to research this topic"]
+    "title": "SHORT PUNCHY TITLE IN CAPS (max 5 words)",
+    "topic_summary": "One sentence: what students will explore or do in this lesson.",
+    "why_it_fits": "One sentence: why this fits the {strand} strand and {level}.",
+    "main_task_type": "Role-Play / Debate / Presentation / Game / Quiz / Group Work / Design Challenge",
+    "vocabulary_angle": "The specific vocabulary set or language area this covers",
+    "engagement_hook": "What makes this exciting or immediately relevant to 16-18 year olds",
+    "search_terms": ["3-5 specific web search terms to research this topic"]
   }}
 ]"""
 
@@ -120,12 +150,12 @@ LESSON SETTINGS:
 Return a single JSON object:
 {{
   "title": "{title.upper()}",
-  "topic_summary": "One sentence: what students will do in this lesson.",
-  "why_it_fits": "One sentence: why this fits the strand and level.",
-  "main_task_type": "Role-Play / Debate / Presentation / Game / Quiz / Group Work",
-  "vocabulary_angle": "What vocabulary area this covers",
-  "engagement_hook": "What makes this exciting or relevant to 16-18 year olds",
-  "search_terms": ["3-5 web search terms to research this topic"]
+  "topic_summary": "One sentence: what students will explore or do in this lesson.",
+  "why_it_fits": "One sentence: why this fits the {strand} strand and {level}.",
+  "main_task_type": "Role-Play / Debate / Presentation / Game / Quiz / Group Work / Design Challenge",
+  "vocabulary_angle": "The specific vocabulary set or language area this covers",
+  "engagement_hook": "What makes this exciting or immediately relevant to 16-18 year olds",
+  "search_terms": ["3-5 specific web search terms to research this topic"]
 }}"""
 
     resp = _api_call_with_retry(lambda: client.messages.create(
