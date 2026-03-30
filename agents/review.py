@@ -1,6 +1,6 @@
 """
 Review Agent
-Reads a generated lesson, checks it against Charlie's patterns,
+Reads a generated lesson, checks it against UKLC PURPOSE patterns,
 and automatically fixes any issues found.
 """
 import json
@@ -11,32 +11,35 @@ import anthropic
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
 
 REVIEW_RULES = """
-CHARLIE'S LESSON QUALITY RULES — check ALL of these:
+UKLC PURPOSE LESSON QUALITY RULES — check ALL of these:
 
 STRUCTURE:
-- Must NOT end with a reflection or writing task slide — remove them
-- Must have a teacher plan (teacher_steps) with exactly 5 steps
-- Must have a video_placeholder slide
-- Must have an answers_hidden slide after any quiz slide
-- Must have at least one gap_fill slide with SCRAMBLED sentences
-- Must have a discussion slide with questions numbered 1-5 (not bullets)
-- Must have a feedback slide as the LAST student slide
-- Minimum 13 student slides, maximum 20
+- Must have EXACTLY 13 student slides (trim or flag if different)
+- Must end with a 'game' slide — NEVER reflection, writing, or feedback
+- Must NOT have a reflection or writing slide anywhere
+- Must have a video_placeholder slide (slide 5 in the arc)
+- Must have exactly 5 teacher_steps totalling exactly 60 minutes
+- Slide arc must follow: hook, vocab_intro, vocab_practice, info, video_placeholder,
+  reading, discussion, grammar_focus, gap_fill, task_setup, task_content, pair_work, game
 
 CONTENT QUALITY:
-- Lesson focus must be ONE sentence starting with a gerund
-- Objectives must have exactly 2 outcomes (not 3+)
-- Teacher instructions must say "the next slide" not "Slide 6" etc.
-- Gap-fill sentences must be scrambled (not in sequential order 1,2,3,4,5,6)
-- Quiz slides must have max 7 items (trim if more)
-- Task structure slides must NOT contain timestamps like "0:00-0:15"
-- Feedback slide must have max 3 criteria
-- Activity instructions on student slides must be SHORT (1 sentence max)
-- Discussion questions should feel personally relevant to 16-18 year olds
+- hook slide: exactly 2 warm-up questions, no more
+- vocab_intro: 6-8 items maximum
+- gap_fill: sentences must be scrambled/jumbled — NOT simple fill-in-the-blank
+- discussion: exactly 5 questions numbered 1-5, starting factual, building to opinion
+- game slide: maximum 7 items
+- task_setup: bullet points only, max 4 bullets, one action per bullet
+- No timestamps (e.g. "0:00-0:15") anywhere in content
+- activity_instruction on every slide must be 1 short sentence max
+- Teacher instructions must reference "the next slide" not specific slide numbers
+- All content appropriate for ages 16-18, mixed-nationality classroom
 
-LANGUAGE LEVEL:
-- Level 1/2 (A1-B1): Simpler vocabulary, sentence frames provided
-- Level 3/4 (B2-C2): More complex/nuanced language, idioms OK, less scaffolding
+LESSON METADATA:
+- lesson_focus: 2-3 sentences describing topic angle and skill focus
+- objectives: exactly 3 measurable outcomes starting "By the end of the lesson..."
+- lesson_type_label: must be "LANG", "LEAD", or "CULT" only
+- level_label: must be "Level 2" or "Level 3" only
+- week: must be "A" or "B" only
 
 Return ONLY valid JSON — no markdown, no explanation."""
 
@@ -44,43 +47,49 @@ Return ONLY valid JSON — no markdown, no explanation."""
 def run(lesson: dict) -> dict:
     """Review and auto-fix a lesson. Returns the corrected lesson JSON."""
 
-    # First pass: automated checks we can do without Claude
+    # First pass: fast structural fixes without Claude
     lesson = _auto_fix_structure(lesson)
 
-    # Second pass: Claude reviews and fixes content quality
-    prompt = f"""Review this lesson plan and fix ALL issues you find according to the rules.
+    # Second pass: Claude fixes content quality
+    prompt = f"""Review this lesson plan and fix ALL issues according to the rules.
 
 LESSON:
 {json.dumps(lesson, indent=2)}
 
-ISSUES TO CHECK AND FIX:
-1. Remove any reflection or writing task slides at the end
-2. Ensure lesson ends with a feedback slide
-3. Ensure gap_fill sentences are SCRAMBLED (if they look sequential, reorder them)
-4. Remove timestamps from task structure slides (e.g. "0:00-0:15")
-5. Ensure discussion questions are numbered 1,2,3,4,5 in the content
-6. Trim quiz items to max 7 if there are more
-7. Ensure feedback slide has max 3 criteria
-8. Ensure lesson_focus is one gerund sentence
-9. Ensure objectives has exactly 2 outcomes
-10. Ensure teacher instructions say "the next slide" not specific slide numbers
-11. Ensure activity_instruction on each slide is 1 short sentence
-12. Ensure there is an answers_hidden slide after any quiz slide
-13. Ensure there is a video_placeholder slide
+FIX ALL OF THE FOLLOWING:
+1. Ensure student_slides has exactly 13 slides in the correct arc order:
+   hook, vocab_intro, vocab_practice, info, video_placeholder, reading,
+   discussion, grammar_focus, gap_fill, task_setup, task_content, pair_work, game
+2. Ensure slide 13 is a game slide — never reflection, writing, or feedback
+3. Ensure hook slide has exactly 2 questions in content
+4. Ensure vocab_intro has max 8 items
+5. Ensure gap_fill sentences are scrambled/jumbled, not simple blanks
+6. Ensure discussion has exactly 5 questions numbered 1-5
+7. Ensure game slide has max 7 items
+8. Ensure task_setup has max 4 bullet points
+9. Remove any timestamps like "0:00-0:15" from content
+10. Ensure every activity_instruction is 1 short sentence
+11. Ensure teacher_steps has exactly 5 steps totalling 60 minutes
+12. Ensure teacher instructions say "the next slide" not slide numbers
 
 Return the COMPLETE corrected lesson as JSON with the same structure.
 Fix everything — do not just flag issues."""
 
     resp = client.messages.create(
         model="claude-sonnet-4-20250514",
-        max_tokens=8000,
+        max_tokens=8096,
         system=REVIEW_RULES,
         messages=[{"role": "user", "content": prompt}]
     )
     raw = resp.content[0].text.strip()
     raw = re.sub(r'^```(?:json)?\s*', '', raw)
     raw = re.sub(r'\s*```$', '', raw)
-    return json.loads(raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # If Claude's response is malformed, return the auto-fixed version
+        print('[review] JSON parse error on Claude response — returning auto-fixed lesson')
+        return lesson
 
 
 def _auto_fix_structure(lesson: dict) -> dict:
@@ -88,33 +97,51 @@ def _auto_fix_structure(lesson: dict) -> dict:
     slides = lesson.get("student_slides", [])
 
     # Remove trailing reflection/writing slides
-    while slides and slides[-1].get("slide_type") in ("reflection", "writing"):
+    while slides and slides[-1].get("slide_type") in ("reflection", "writing", "feedback"):
         slides.pop()
 
-    # Ensure feedback slide is last
-    if slides and slides[-1].get("slide_type") != "group_work":
-        has_feedback = any(s.get("slide_type") == "group_work" and
-                          ("feedback" in s.get("title", "").lower() or
-                           "vote" in s.get("content", "").lower())
-                          for s in slides)
-        if not has_feedback:
-            slides.append({
-                "slide_type": "group_work",
-                "title": "Pitch Feedback",
-                "content": "After each group presents:\n\nVOTE: Would you buy / try / use this?\nSTAR: What was the most effective moment?\nSUGGESTION: One thing that could make it stronger",
-                "image_placeholder": "Audience voting graphic",
-                "activity_instruction": "Be honest — explain your vote"
-            })
+    # Cap at 16 slides
+    if len(slides) > 16:
+        slides = slides[:16]
 
-    # Cap quiz slides at 7 items
+    # Ensure last slide is a game — if not, swap the last slide type
+    if slides and slides[-1].get("slide_type") != "game":
+        # Check if there's a game slide elsewhere we can move to end
+        game_indices = [i for i, s in enumerate(slides) if s.get("slide_type") == "game"]
+        if game_indices:
+            game_slide = slides.pop(game_indices[-1])
+            slides.append(game_slide)
+        else:
+            # Convert last slide to a game if no game exists
+            slides[-1]["slide_type"] = "game"
+
+    # Cap game slides at 7 items
     for slide in slides:
-        if slide.get("slide_type") == "quiz":
-            lines = slide.get("content", "").split("\n")
-            q_lines = [l for l in lines if re.match(r"^(Q\d|Round \d|\d+\.|\d+:)", l.strip())]
-            if len(q_lines) > 7:
-                # Keep first 7 quiz lines + any non-question lines (headers etc)
-                non_q = [l for l in lines if not re.match(r"^(Q\d|Round \d|\d+\.|\d+:)", l.strip())]
-                slide["content"] = "\n".join(non_q[:2] + q_lines[:7])
+        if slide.get("slide_type") == "game":
+            lines = [l for l in slide.get("content", "").split("\n") if l.strip()]
+            if len(lines) > 7:
+                slide["content"] = "\n".join(lines[:7])
+
+    # Cap vocab slides at 8 items
+    for slide in slides:
+        if slide.get("slide_type") in ("vocab_intro", "vocab_practice"):
+            lines = [l for l in slide.get("content", "").split("\n") if l.strip()]
+            if len(lines) > 8:
+                slide["content"] = "\n".join(lines[:8])
+
+    # Remove timestamps from all content
+    for slide in slides:
+        if "content" in slide:
+            slide["content"] = re.sub(r'\d+:\d{2}[-–]\d+:\d{2}', '', slide["content"])
+
+    # Ensure teacher_steps times sum to 60
+    steps = lesson.get("teacher_steps", [])
+    if steps:
+        total = sum(s.get("time_mins", 0) for s in steps)
+        if total != 60 and len(steps) == 5:
+            diff = 60 - total
+            steps[-1]["time_mins"] = steps[-1].get("time_mins", 0) + diff
 
     lesson["student_slides"] = slides
+    lesson["teacher_steps"] = steps
     return lesson
