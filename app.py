@@ -34,14 +34,20 @@ def _push(run_id: str, event: str, data: dict):
 
 def _stream(run_id: str):
     idx = 0
+    last_ping = time.time()
     while True:
         msgs = _streams.get(run_id, [])
         while idx < len(msgs):
             yield msgs[idx]
             idx += 1
+            last_ping = time.time()
         state = sm.load(run_id)
         if state["status"] in ("complete", "error"):
             break
+        # Keepalive ping every 15s so Railway's proxy doesn't drop the connection
+        if time.time() - last_ping > 15:
+            yield ": ping\n\n"
+            last_ping = time.time()
         time.sleep(0.4)
 
 
