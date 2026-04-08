@@ -1,7 +1,8 @@
 """
-UKLC Purpose Lesson PPTX Builder — v4
-Clean white slides matching real UKLC lesson design.
-No header/footer bars. Plain title text + coloured rounded-rect boxes.
+UKLC Purpose Lesson PPTX Builder — v5
+Immersive design: dark atmospheric background + floating white card.
+Matches visual style of real UKLC PURPOSE lesson decks (Reading Challenge,
+Brainworm Apocalypse, Game of Morals reference PPTXs).
 """
 import os, re, subprocess, tempfile
 
@@ -14,15 +15,49 @@ RED    = 'EC273B'
 WHITE  = 'FFFFFF'
 LIGHT  = 'E6EEF3'
 PINK   = 'FAD7D8'
-GREY   = 'AAAAAA'
+GREY   = '8A9BAD'
 
-W = 12192000   # slide width  EMU (33.87cm widescreen)
-H = 6858000    # slide height EMU (19.05cm)
+# Dark atmospheric background tones
+D_NAVY   = '0B1520'
+D_PURPLE = '130A28'
+D_TEAL   = '081520'
+D_DARK   = '05050F'
+D_GREEN  = '081508'
+D_RED    = '180808'
+
+W = 12192000   # slide width  EMU (widescreen)
+H = 6858000    # slide height EMU
 
 MAX_STUDENT_SLIDES = 16
 
-# ── XML primitives ─────────────────────────────────────────────────────────────
+# ── Background themes: (gradient_top, gradient_bottom, accent_strip) ──────────
+_BG = {
+    'hook':              (D_NAVY,   NAVY,      YELLOW),
+    'vocab_intro':       (D_PURPLE, '2D1B69',  PINK),
+    'vocab_practice':    (D_PURPLE, '2D1B69',  PINK),
+    'matching':          (D_PURPLE, '2D1B69',  LIGHT),
+    'discussion':        (D_TEAL,   '1A3A4A',  LIGHT),
+    'game':              (D_DARK,   '150A28',  YELLOW),
+    'task_setup':        (D_RED,    '2A0E0E',  RED),
+    'task_content':      (D_RED,    '2A0E0E',  RED),
+    'info':              (D_NAVY,   NAVY,      LIGHT),
+    'reading':           (D_GREEN,  '1C2B1A',  LIGHT),
+    'grammar_focus':     (D_NAVY,   '1A1500',  YELLOW),
+    'gap_fill':          (D_TEAL,   '1A3A4A',  LIGHT),
+    'video_placeholder': (D_DARK,   '050505',  RED),
+    'pair_work':         (D_TEAL,   '1A3A4A',  YELLOW),
+    'group_work':        (D_TEAL,   '1A3A4A',  YELLOW),
+    'roleplay':          (D_PURPLE, '2D1B69',  PINK),
+    'debate':            (D_NAVY,   NAVY,      RED),
+}
+_BG_DEFAULT = (D_NAVY, NAVY, LIGHT)
 
+# ── ID counter ────────────────────────────────────────────────────────────────
+_sid = [100]
+def _nid():
+    v = _sid[0]; _sid[0] += 1; return v
+
+# ── XML helpers ────────────────────────────────────────────────────────────────
 def _esc(t):
     return (str(t)
         .replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
@@ -32,13 +67,13 @@ def _esc(t):
         .replace('\u2026','...')
     )
 
-def _fill(hex_colour):
-    return f'<a:solidFill><a:srgbClr val="{hex_colour}"/></a:solidFill>'
+def _fill(hex_col):
+    return f'<a:solidFill><a:srgbClr val="{hex_col}"/></a:solidFill>'
 
 def _rpr(sz, bold=False, colour=NAVY, italic=False):
     b = ' b="1"' if bold else ''
     i = ' i="1"' if italic else ''
-    return (f'<a:rPr lang="en-GB" sz="{sz}"{b}{i} dirty="0">'
+    return (f'<a:rPr lang="en-GB" sz="{sz}"{b}{i} dirty="0" smtClean="0">'
             f'{_fill(colour)}'
             f'<a:latin typeface="Calibri" pitchFamily="0" charset="0"/>'
             f'</a:rPr>')
@@ -48,13 +83,482 @@ def _para(text, sz, bold=False, colour=NAVY, align='l', italic=False):
             f'<a:r>{_rpr(sz,bold,colour,italic)}<a:t>{_esc(text)}</a:t></a:r>'
             f'</a:p>')
 
-def _empty_para():
-    return '<a:p><a:endParaRPr lang="en-GB" dirty="0"/></a:p>'
+def _empty_para(sz=1400):
+    return f'<a:p><a:pPr/><a:endParaRPr lang="en-GB" sz="{sz}" dirty="0"/></a:p>'
 
-_sid = [100]
-def _nid():
-    v = _sid[0]; _sid[0] += 1; return v
+def _spacer():
+    """Short spacing paragraph between content sections."""
+    return '<a:p><a:pPr spc="-100000"/><a:endParaRPr lang="en-GB" sz="600" dirty="0"/></a:p>'
 
+def _rich_paras(text, sz, colour=NAVY, align='l', strip_bullets=False):
+    """Build paragraph XML. Handles **bold** inline markers."""
+    if not text:
+        return _empty_para(sz)
+    result = []
+    for raw in text.split('\n'):
+        line = raw.strip()
+        if not line:
+            result.append(_spacer())
+            continue
+        if strip_bullets:
+            line = re.sub(r'^[\-•*]\s*', '', line)
+            line = re.sub(r'^\d+[\.\)]\s*', '', line)
+        parts = re.split(r'\*\*([^*]+)\*\*', line)
+        runs = []
+        for i, part in enumerate(parts):
+            if not part:
+                continue
+            runs.append(
+                f'<a:r>{_rpr(sz, bold=(i%2==1), colour=colour)}'
+                f'<a:t>{_esc(part)}</a:t></a:r>'
+            )
+        if runs:
+            result.append(f'<a:p><a:pPr algn="{align}"/>' + ''.join(runs) + '</a:p>')
+    return ''.join(result) if result else _empty_para(sz)
+
+# ── Shape primitives ───────────────────────────────────────────────────────────
+def _grad_rect(shapes, x, y, cx, cy, col1, col2, angle=5400000):
+    grad = (f'<a:gradFill rotWithShape="1"><a:gsLst>'
+            f'<a:gs pos="0"><a:srgbClr val="{col1}"/></a:gs>'
+            f'<a:gs pos="100000"><a:srgbClr val="{col2}"/></a:gs>'
+            f'</a:gsLst><a:lin ang="{angle}" scaled="0"/></a:gradFill>')
+    shapes.append(
+        f'<p:sp><p:nvSpPr>'
+        f'<p:cNvPr id="{_nid()}" name="bg"/>'
+        f'<p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
+        f'<p:spPr>'
+        f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+        f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>{grad}'
+        f'<a:ln><a:noFill/></a:ln></p:spPr>'
+        f'<p:txBody><a:bodyPr/><a:lstStyle/>{_empty_para()}</p:txBody></p:sp>'
+    )
+
+def _solid_rect(shapes, x, y, cx, cy, col, name='r'):
+    shapes.append(
+        f'<p:sp><p:nvSpPr>'
+        f'<p:cNvPr id="{_nid()}" name="{name}"/>'
+        f'<p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
+        f'<p:spPr>'
+        f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+        f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>{_fill(col)}'
+        f'<a:ln><a:noFill/></a:ln></p:spPr>'
+        f'<p:txBody><a:bodyPr/><a:lstStyle/>{_empty_para()}</p:txBody></p:sp>'
+    )
+
+def _txt_box(shapes, x, y, cx, cy, paras_xml, anchor='t'):
+    """Transparent floating text box (for labels outside cards)."""
+    shapes.append(
+        f'<p:sp><p:nvSpPr>'
+        f'<p:cNvPr id="{_nid()}" name="lbl"/>'
+        f'<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
+        f'<p:spPr>'
+        f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+        f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/>'
+        f'<a:ln><a:noFill/></a:ln></p:spPr>'
+        f'<p:txBody>'
+        f'<a:bodyPr wrap="square" rtlCol="0" anchor="{anchor}"><a:spAutoFit/></a:bodyPr>'
+        f'<a:lstStyle/>{paras_xml}'
+        f'</p:txBody></p:sp>'
+    )
+
+def _float_card(shapes, x, y, cx, cy, paras_xml, anchor='t', adj=50000):
+    """
+    White floating card — the primary content container.
+    Generous corner radius (adj=50000 = very round, like real lessons).
+    Uses normAutofit so text scales to fit card.
+    """
+    shapes.append(
+        f'<p:sp><p:nvSpPr>'
+        f'<p:cNvPr id="{_nid()}" name="card"/>'
+        f'<p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
+        f'<p:spPr>'
+        f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+        f'<a:prstGeom prst="roundRect">'
+        f'<a:avLst><a:gd name="adj" fmla="val {adj}"/></a:avLst>'
+        f'</a:prstGeom>{_fill(WHITE)}<a:ln><a:noFill/></a:ln>'
+        f'</p:spPr>'
+        f'<p:txBody>'
+        f'<a:bodyPr wrap="square" rtlCol="0" anchor="{anchor}" '
+        f'lIns="720000" rIns="720000" tIns="540000" bIns="360000">'
+        f'<a:normAutofit/></a:bodyPr>'
+        f'<a:lstStyle/>{paras_xml}'
+        f'</p:txBody></p:sp>'
+    )
+
+def _colour_card(shapes, x, y, cx, cy, fill_col, paras_xml, anchor='ctr', adj=30000):
+    """Coloured rounded card (vocab pills, item grids, debate panels)."""
+    shapes.append(
+        f'<p:sp><p:nvSpPr>'
+        f'<p:cNvPr id="{_nid()}" name="cc"/>'
+        f'<p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
+        f'<p:spPr>'
+        f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+        f'<a:prstGeom prst="roundRect">'
+        f'<a:avLst><a:gd name="adj" fmla="val {adj}"/></a:avLst>'
+        f'</a:prstGeom>{_fill(fill_col)}<a:ln><a:noFill/></a:ln>'
+        f'</p:spPr>'
+        f'<p:txBody>'
+        f'<a:bodyPr wrap="square" rtlCol="0" anchor="{anchor}" '
+        f'lIns="360000" rIns="360000" tIns="180000" bIns="180000">'
+        f'<a:normAutofit/></a:bodyPr>'
+        f'<a:lstStyle/>{paras_xml}'
+        f'</p:txBody></p:sp>'
+    )
+
+def _badge(shapes, cx_c, cy_c, r, fill_col, num):
+    """Numbered circle badge positioned by centre point."""
+    d = r * 2
+    shapes.append(
+        f'<p:sp><p:nvSpPr>'
+        f'<p:cNvPr id="{_nid()}" name="badge"/>'
+        f'<p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
+        f'<p:spPr>'
+        f'<a:xfrm><a:off x="{cx_c-r}" y="{cy_c-r}"/><a:ext cx="{d}" cy="{d}"/></a:xfrm>'
+        f'<a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom>{_fill(fill_col)}'
+        f'<a:ln><a:noFill/></a:ln></p:spPr>'
+        f'<p:txBody>'
+        f'<a:bodyPr anchor="ctr" lIns="0" rIns="0" tIns="0" bIns="0"/>'
+        f'<a:lstStyle/>'
+        f'{_para(str(num), 1600, bold=True, colour=WHITE, align="ctr")}'
+        f'</p:txBody></p:sp>'
+    )
+
+# ── Background helper ──────────────────────────────────────────────────────────
+def _bg(shapes, stype):
+    """Apply atmospheric gradient bg + thin accent strip at bottom."""
+    col1, col2, accent = _BG.get(stype, _BG_DEFAULT)
+    _grad_rect(shapes, 0, 0, W, H, col1, col2)
+    strip_h = int(H * 0.055)   # ~6% height accent strip
+    _solid_rect(shapes, 0, H - strip_h, W, strip_h, accent, 'strip')
+
+def _strip_h():
+    return int(H * 0.055)
+
+# ── Per-slide builders ─────────────────────────────────────────────────────────
+
+def _build_hook(shapes, title, body, act, img):
+    """
+    Hook: large bold white title + floating card with opening questions/content.
+    Dark navy gradient, yellow accent strip.
+    """
+    _bg(shapes, 'hook')
+    # Large white title — outside card, top area
+    t = _para(title.upper(), 4400, bold=True, colour=WHITE, align='ctr')
+    _txt_box(shapes, 400000, 160000, W - 800000, 1100000, t, anchor='ctr')
+    # White card — lower 65%
+    card_y  = 1450000
+    card_h  = H - card_y - _strip_h() - 60000
+    lines   = [l.strip() for l in body.split('\n') if l.strip()][:3]
+    xml     = _rich_paras('\n'.join(lines), 2600, NAVY, 'ctr')
+    if act:
+        xml += _spacer() + _para(act, 1600, italic=True, colour=GREY, align='ctr')
+    _float_card(shapes, 400000, card_y, W - 800000, card_h, xml, anchor='ctr', adj=50000)
+
+
+def _build_vocab(shapes, title, body, act):
+    """
+    Vocab: dark purple gradient + 2-column grid of LIGHT/PINK cards.
+    Words (bold large) + definitions (small italic) if separator found.
+    """
+    _bg(shapes, 'vocab_intro')
+    # Section label — white text at top
+    lbl = _para(title, 2200, bold=True, colour=WHITE, align='ctr')
+    _txt_box(shapes, 400000, 160000, W - 800000, 650000, lbl, anchor='ctr')
+    lines = [l.strip() for l in body.split('\n') if l.strip()][:8]
+    n     = len(lines)
+    rows  = (n + 1) // 2
+    sh    = _strip_h()
+    avail_h = H - 950000 - sh - 60000
+    avail_w = W - 900000
+    cell_w  = (avail_w - 200000) // 2
+    cell_h  = min(1050000, max(480000, (avail_h - (rows-1)*120000) // max(rows,1)))
+    FILLS   = [LIGHT, PINK]
+    for i, line in enumerate(lines):
+        col = i % 2
+        row = i // 2
+        x   = 450000 + col * (cell_w + 200000)
+        y   = 950000  + row * (cell_h + 120000)
+        # Detect word — definition separator
+        split = None
+        for sep in [' — ', ' - ', ' – ', ': ']:
+            if sep in line:
+                split = line.split(sep, 1)
+                break
+        if split:
+            xml = (_para(split[0], 2200, bold=True, colour=NAVY) +
+                   _spacer() +
+                   _para(split[1], 1700, italic=True, colour=NAVY))
+        else:
+            xml = _para(line, 2400, bold=True, colour=NAVY, align='ctr')
+        _colour_card(shapes, x, y, cell_w, cell_h, FILLS[col%2], xml,
+                     anchor='ctr' if not split else 't', adj=35000)
+    if act:
+        xml = _para(act, 1400, italic=True, colour=WHITE, align='ctr')
+        _txt_box(shapes, 400000, H - sh - 300000, W - 800000, 260000, xml)
+
+
+def _build_info(shapes, title, body, act, img):
+    """Info/content: navy gradient + full-width white card with body text."""
+    _bg(shapes, 'info')
+    lbl = _para(title, 2400, bold=True, colour=WHITE)
+    _txt_box(shapes, 500000, 180000, W - 1000000, 680000, lbl, anchor='ctr')
+    sh     = _strip_h()
+    card_h = H - 1050000 - sh - 60000
+    xml    = _rich_paras(body, 2200, NAVY)
+    if act:
+        xml += _spacer() + _para(act, 1600, italic=True, colour=GREY)
+    _float_card(shapes, 400000, 980000, W - 800000, card_h, xml, anchor='t', adj=45000)
+
+
+def _build_reading(shapes, title, body, act):
+    """
+    Reading: dark forest green gradient.
+    If body has questions section: two side-by-side cards (passage | questions).
+    Otherwise: single large card.
+    """
+    _bg(shapes, 'reading')
+    lbl = _para(title, 2200, bold=True, colour=WHITE)
+    _txt_box(shapes, 500000, 180000, W - 1000000, 640000, lbl)
+    sh     = _strip_h()
+    card_y = 920000
+    card_h = H - card_y - sh - 80000
+    # Split passage from questions
+    m = re.search(r'(Questions?:?\s*\n)', body, re.IGNORECASE)
+    if m:
+        passage   = body[:m.start()].strip()
+        questions = body[m.end():].strip()
+    elif body.count('\n') >= 3 and '?' in body:
+        lines  = [l.strip() for l in body.split('\n') if l.strip()]
+        qs     = [l for l in lines if '?' in l or l.startswith(str(len(lines)))]
+        non_qs = [l for l in lines if l not in qs]
+        passage   = '\n'.join(non_qs)
+        questions = '\n'.join(qs)
+    else:
+        passage, questions = body, ''
+
+    if questions:
+        gap    = 180000
+        left_w = int(W * 0.52) - 400000 - gap // 2
+        right_w = W - left_w - 800000 - gap
+        _float_card(shapes, 400000, card_y, left_w, card_h,
+                    _rich_paras(passage, 1900, NAVY), anchor='t', adj=40000)
+        _float_card(shapes, 400000 + left_w + gap, card_y, right_w, card_h,
+                    _rich_paras(questions, 1900, NAVY), anchor='t', adj=40000)
+    else:
+        xml = _rich_paras(passage, 2100, NAVY)
+        if act:
+            xml += _spacer() + _para(act, 1600, italic=True, colour=GREY)
+        _float_card(shapes, 400000, card_y, W - 800000, card_h, xml,
+                    anchor='t', adj=45000)
+
+
+def _build_discussion(shapes, title, body, act):
+    """
+    Discussion: dark teal gradient.
+    Title outside card (white), numbered badge circles + individual question cards.
+    """
+    _bg(shapes, 'discussion')
+    t = _para(title, 2800, bold=True, colour=WHITE, align='ctr')
+    _txt_box(shapes, 400000, 160000, W - 800000, 800000, t, anchor='ctr')
+    qs = [re.sub(r'^[\-•*\d\.\)]\s*', '', q.strip())
+          for q in body.split('\n') if q.strip()][:5]
+    sh       = _strip_h()
+    avail_h  = H - 1100000 - sh
+    n        = len(qs)
+    gap      = 100000
+    card_h   = min(1400000, max(500000, (avail_h - (n-1)*gap) // max(n,1)))
+    BADGE_R  = 260000
+    card_x   = 400000 + BADGE_R * 2 + 120000
+    card_w   = W - card_x - 400000
+    BCOLS    = [NAVY, RED, '2D1B69', '1A3A4A', '8B0000']
+    y = 1060000
+    for i, q in enumerate(qs):
+        # Draw card, then badge on top (badge is to the LEFT of card, flush)
+        _float_card(shapes, card_x, y, card_w, card_h,
+                    _rich_paras(q, 2200, NAVY), anchor='ctr', adj=38000)
+        _badge(shapes, 400000 + BADGE_R, y + card_h // 2, BADGE_R, BCOLS[i%len(BCOLS)], i+1)
+        y += card_h + gap
+    if act:
+        _txt_box(shapes, 400000, H - sh - 290000, W - 800000, 260000,
+                 _para(act, 1400, italic=True, colour=WHITE, align='ctr'))
+
+
+def _build_grammar(shapes, title, body, act):
+    """Grammar: navy-amber gradient. First line as rule (bold large), rest as examples."""
+    _bg(shapes, 'grammar_focus')
+    lbl = _para(title, 2400, bold=True, colour=WHITE)
+    _txt_box(shapes, 500000, 180000, W - 1000000, 680000, lbl)
+    lines  = [l.strip() for l in body.split('\n') if l.strip()]
+    sh     = _strip_h()
+    card_h = H - 1050000 - sh - 60000
+    xml = ''
+    if lines:
+        xml += _para(lines[0], 2600, bold=True, colour=NAVY)
+        xml += _spacer() + _spacer()
+        for line in lines[1:]:
+            xml += _rich_paras(line, 2100, NAVY) + _spacer()
+    if act:
+        xml += _para(act, 1600, italic=True, colour=GREY)
+    _float_card(shapes, 400000, 980000, W - 800000, card_h, xml, anchor='t', adj=45000)
+
+
+def _build_gap_fill(shapes, title, body, act):
+    """Gap fill: alternating LIGHT / PINK cards on teal bg."""
+    _bg(shapes, 'gap_fill')
+    lbl = _para(title, 2400, bold=True, colour=WHITE)
+    _txt_box(shapes, 500000, 180000, W - 1000000, 680000, lbl)
+    lines  = [l.strip() for l in body.split('\n') if l.strip()][:7]
+    sh     = _strip_h()
+    avail_h = H - 1000000 - sh
+    n       = len(lines)
+    gap     = 80000
+    cell_h  = min(780000, max(380000, (avail_h - (n-1)*gap) // max(n,1)))
+    FILLS   = [LIGHT, PINK]
+    y = 1000000
+    for i, line in enumerate(lines):
+        _colour_card(shapes, 400000, y, W - 800000, cell_h,
+                     FILLS[i%2], _rich_paras(line, 2000, NAVY),
+                     anchor='ctr', adj=25000)
+        y += cell_h + gap
+    if act:
+        _txt_box(shapes, 400000, H - sh - 290000, W - 800000, 260000,
+                 _para(act, 1400, italic=True, colour=WHITE, align='ctr'))
+
+
+def _build_task(shapes, title, body, act, img):
+    """Task setup/content: dark red gradient. Bold white title + large white card."""
+    _bg(shapes, 'task_setup')
+    t = _para(title, 3400, bold=True, colour=WHITE, align='ctr')
+    _txt_box(shapes, 400000, 160000, W - 800000, 1050000, t, anchor='ctr')
+    sh     = _strip_h()
+    card_h = H - 1400000 - sh - 60000
+    xml    = _rich_paras(body, 2300, NAVY, strip_bullets=True)
+    if act:
+        xml += _spacer() + _para(act, 1600, italic=True, colour=GREY)
+    _float_card(shapes, 400000, 1330000, W - 800000, card_h, xml, anchor='t', adj=45000)
+
+
+def _build_pair(shapes, title, body, act):
+    """Pair / group work: dark teal + stacked white question cards."""
+    _bg(shapes, 'pair_work')
+    t = _para(title, 2800, bold=True, colour=WHITE, align='ctr')
+    _txt_box(shapes, 400000, 160000, W - 800000, 800000, t, anchor='ctr')
+    lines   = [re.sub(r'^[\-•*\d\.\)]\s*', '', l.strip())
+               for l in body.split('\n') if l.strip()][:4]
+    sh      = _strip_h()
+    avail_h = H - 1100000 - sh
+    n       = len(lines)
+    gap     = 110000
+    card_h  = min(1450000, max(500000, (avail_h - (n-1)*gap) // max(n,1)))
+    y = 1060000
+    for line in lines:
+        _float_card(shapes, 400000, y, W - 800000, card_h,
+                    _rich_paras(line, 2300, NAVY, 'ctr'),
+                    anchor='ctr', adj=42000)
+        y += card_h + gap
+    if act:
+        _txt_box(shapes, 400000, H - sh - 290000, W - 800000, 260000,
+                 _para(act, 1400, italic=True, colour=WHITE, align='ctr'))
+
+
+def _build_game(shapes, title, body, act):
+    """
+    Game: near-black gradient + huge yellow UPPERCASE title outside card,
+    then coloured item grid below.
+    """
+    _bg(shapes, 'game')
+    # Massive display title
+    t = _para(title.upper(), 5600, bold=True, colour=YELLOW, align='ctr')
+    _txt_box(shapes, 300000, 130000, W - 600000, 1350000, t, anchor='ctr')
+    lines = [re.sub(r'^[\-•*\d\.\)]\s*', '', l.strip())
+             for l in body.split('\n') if l.strip()][:8]
+    n     = len(lines)
+    sh    = _strip_h()
+    area_y = 1580000
+    area_h = H - area_y - sh - 100000
+    if n <= 3:
+        cols, rows = n, 1
+    elif n <= 4:
+        cols, rows = 2, 2
+    elif n <= 6:
+        cols, rows = 3, 2
+    else:
+        cols, rows = 4, 2
+    gap_x  = 160000
+    gap_y  = 150000
+    cell_w = (W - 800000 - (cols-1)*gap_x) // cols
+    cell_h = min(1000000, (area_h - (rows-1)*gap_y) // max(rows,1))
+    FILLS  = [LIGHT, PINK, LIGHT, PINK, LIGHT, PINK, LIGHT, PINK]
+    for i, line in enumerate(lines):
+        col = i % cols
+        row = i // cols
+        x   = 400000 + col * (cell_w + gap_x)
+        y   = area_y  + row * (cell_h + gap_y)
+        _colour_card(shapes, x, y, cell_w, cell_h, FILLS[i%2],
+                     _para(line, 2100, bold=True, colour=NAVY, align='ctr'),
+                     anchor='ctr', adj=32000)
+    if act:
+        _txt_box(shapes, 400000, H - sh - 290000, W - 800000, 260000,
+                 _para(act, 1400, italic=True, colour=WHITE, align='ctr'))
+
+
+def _build_video(shapes, title, body):
+    """Video placeholder: near-black dramatic + watch-question cards."""
+    _bg(shapes, 'video_placeholder')
+    icon = _para('▶  ' + (title or 'Watch the video'), 3200, bold=True, colour=WHITE, align='ctr')
+    _txt_box(shapes, 400000, 160000, W - 800000, 1150000, icon, anchor='ctr')
+    lines = [l.strip().lstrip('-•').strip() for l in body.split('\n') if l.strip()][:4]
+    sh    = _strip_h()
+    avail_h = H - 1500000 - sh
+    n     = max(len(lines), 1)
+    gap   = 120000
+    card_h = min(950000, max(480000, (avail_h - (n-1)*gap) // n))
+    y = 1450000
+    for line in lines:
+        _float_card(shapes, 1000000, y, W - 2000000, card_h,
+                    _para(line, 2300, colour=NAVY, align='ctr'),
+                    anchor='ctr', adj=48000)
+        y += card_h + gap
+
+
+def _build_debate(shapes, title, body, act):
+    """
+    Debate: two side-by-side cards — left white (pro), right dark navy (con).
+    Bold white title above.
+    """
+    _bg(shapes, 'debate')
+    lbl = _para(title, 2800, bold=True, colour=WHITE, align='ctr')
+    _txt_box(shapes, 400000, 160000, W - 800000, 780000, lbl, anchor='ctr')
+    lines = [l.strip() for l in body.split('\n') if l.strip()]
+    mid   = max(1, len(lines) // 2)
+    left  = '\n'.join(lines[:mid])
+    right = '\n'.join(lines[mid:])
+    sh    = _strip_h()
+    half_w = (W - 1000000) // 2
+    card_h = H - 1080000 - sh - 60000
+    _float_card(shapes, 400000, 1020000, half_w, card_h,
+                _rich_paras(left, 2100, NAVY), adj=40000)
+    _colour_card(shapes, 400000 + half_w + 200000, 1020000, half_w, card_h,
+                 NAVY, _rich_paras(right, 2100, WHITE), anchor='t', adj=40000)
+    if act:
+        _txt_box(shapes, 400000, H - sh - 290000, W - 800000, 260000,
+                 _para(act, 1400, italic=True, colour=WHITE, align='ctr'))
+
+
+def _build_standard(shapes, title, body, act, img):
+    """Fallback: navy gradient + white card."""
+    _bg(shapes, 'standard')
+    lbl = _para(title, 2400, bold=True, colour=WHITE)
+    _txt_box(shapes, 500000, 180000, W - 1000000, 680000, lbl)
+    sh     = _strip_h()
+    card_h = H - 1050000 - sh - 60000
+    xml    = _rich_paras(body, 2200, NAVY)
+    if act:
+        xml += _spacer() + _para(act, 1600, italic=True, colour=GREY)
+    _float_card(shapes, 400000, 980000, W - 800000, card_h, xml, anchor='t', adj=45000)
+
+
+# ── Slide XML assembly ─────────────────────────────────────────────────────────
 def _slide_wrap(shapes):
     return (f'<?xml version="1.0" encoding="utf-8"?>'
             f'<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
@@ -68,70 +572,6 @@ def _slide_wrap(shapes):
             f'</p:spTree></p:cSld>'
             f'<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>')
 
-# ── Shape builders ─────────────────────────────────────────────────────────────
-
-def _bg(shapes):
-    """White background rect."""
-    ln = '<a:ln><a:noFill/></a:ln>'
-    shapes.append(
-        f'<p:sp><p:nvSpPr>'
-        f'<p:cNvPr id="{_nid()}" name="bg"/>'
-        f'<p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
-        f'<p:spPr>'
-        f'<a:xfrm><a:off x="0" y="0"/><a:ext cx="{W}" cy="{H}"/></a:xfrm>'
-        f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>{_fill(WHITE)}{ln}'
-        f'</p:spPr>'
-        f'<p:txBody><a:bodyPr/><a:lstStyle/>{_empty_para()}</p:txBody>'
-        f'</p:sp>'
-    )
-
-def _txbox(shapes, x, y, cx, cy, paras_xml):
-    """Transparent text box."""
-    shapes.append(
-        f'<p:sp><p:nvSpPr>'
-        f'<p:cNvPr id="{_nid()}" name="t"/>'
-        f'<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
-        f'<p:spPr>'
-        f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
-        f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/>'
-        f'<a:ln><a:noFill/></a:ln></p:spPr>'
-        f'<p:txBody>'
-        f'<a:bodyPr wrap="square" rtlCol="0"><a:spAutoFit/></a:bodyPr>'
-        f'<a:lstStyle/>{paras_xml}'
-        f'</p:txBody></p:sp>'
-    )
-
-def _rrect(shapes, x, y, cx, cy, fill, paras_xml, anchor='ctr'):
-    """Rounded rect with text."""
-    shapes.append(
-        f'<p:sp><p:nvSpPr>'
-        f'<p:cNvPr id="{_nid()}" name="rr"/>'
-        f'<p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
-        f'<p:spPr>'
-        f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
-        f'<a:prstGeom prst="roundRect">'
-        f'<a:avLst><a:gd name="adj" fmla="val 30000"/></a:avLst>'
-        f'</a:prstGeom>{_fill(fill)}<a:ln><a:noFill/></a:ln>'
-        f'</p:spPr>'
-        f'<p:txBody>'
-        f'<a:bodyPr wrap="square" rtlCol="0" anchor="{anchor}" lIns="360000" rIns="360000" tIns="180000" bIns="180000"/>'
-        f'<a:lstStyle/>{paras_xml}'
-        f'</p:txBody></p:sp>'
-    )
-
-def _title(shapes, text, x=457200, y=228600, cx=None, sz=3200):
-    """Plain navy title text — no box."""
-    cx = cx or (W - 914400)
-    paras = _para(text, sz, bold=False, colour=NAVY)
-    _txbox(shapes, x, y, cx, cy=700000, paras_xml=paras)
-
-def _img_hint(shapes, img):
-    if img:
-        p = _para(f'[IMAGE: {img}]', 900, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, 1000000, W-914400, 400000, p)
-
-# ── Per-slide builders ─────────────────────────────────────────────────────────
-
 def _gen_slide_xml(sd):
     _sid[0] = 100
     stype = sd.get('slide_type', 'info')
@@ -140,9 +580,8 @@ def _gen_slide_xml(sd):
     act   = sd.get('activity_instruction', '')
     img   = sd.get('image_placeholder', '')
     shapes = []
-    _bg(shapes)
 
-    if stype == 'hook':
+    if   stype == 'hook':
         _build_hook(shapes, title, body, act, img)
     elif stype in ('vocab_intro', 'vocab_practice', 'matching'):
         _build_vocab(shapes, title, body, act)
@@ -154,7 +593,7 @@ def _gen_slide_xml(sd):
         _build_reading(shapes, title, body, act)
     elif stype == 'discussion':
         _build_discussion(shapes, title, body, act)
-    elif stype in ('grammar_focus',):
+    elif stype == 'grammar_focus':
         _build_grammar(shapes, title, body, act)
     elif stype == 'gap_fill':
         _build_gap_fill(shapes, title, body, act)
@@ -172,247 +611,17 @@ def _gen_slide_xml(sd):
     return _slide_wrap(shapes)
 
 
-def _build_hook(shapes, title, body, act, img):
-    """White slide: image hint top, title, then pink question boxes."""
-    _img_hint(shapes, img or title)
-    # Title
-    _title(shapes, title, y=228600, sz=3600)
-    # Questions as pink boxes
-    lines = [l.strip() for l in body.split('\n') if l.strip()][:2]
-    y = H - 2000000
-    gap = 120000
-    box_h = 700000
-    for line in lines:
-        p = _para(line, 2000, colour=NAVY, align='ctr')
-        _rrect(shapes, 457200, y, W-914400, box_h, PINK, p)
-        y += box_h + gap
-    # Activity instruction small below
-    if act:
-        p = _para(act, 1400, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, y + 60000, W-914400, 400000, p)
-
-
-def _build_vocab(shapes, title, body, act):
-    """Title + 2-column grid of light blue boxes."""
-    _title(shapes, title)
-    lines = [l.strip() for l in body.split('\n') if l.strip()][:8]
-    n = len(lines)
-    cols = 2
-    rows = (n + 1) // 2
-    col_w = (W - 1200000) // 2
-    col_gap = 200000
-    row_h = min(900000, max(500000, (H - 1200000) // rows))
-    row_gap = 80000
-    for i, line in enumerate(lines):
-        col = i % 2
-        row = i // 2
-        x = 457200 + col * (col_w + col_gap)
-        y = 900000 + row * (row_h + row_gap)
-        fill = LIGHT if col == 0 else PINK
-        p = _para(line, 1600, colour=NAVY)
-        _rrect(shapes, x, y, col_w, row_h, fill, p, anchor='ctr')
-    if act:
-        p = _para(act, 1300, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, H-380000, W-914400, 340000, p)
-
-
-def _build_info(shapes, title, body, act, img):
-    """Title + large light blue content box."""
-    _title(shapes, title)
-    if body:
-        p = ''.join(_para(l, 1700, colour=NAVY) for l in body.split('\n'))
-        _rrect(shapes, 457200, 900000, W-914400, H-1300000, LIGHT, p, anchor='t')
-    if act:
-        p = _para(act, 1300, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, H-380000, W-914400, 340000, p)
-
-
-def _build_video(shapes, title, body):
-    """Navy instruction box + watch questions in pink boxes."""
-    # Navy instruction top
-    p = _para(title or 'Watch the video', 2200, colour=WHITE, align='ctr')
-    _rrect(shapes, 457200, 300000, W-914400, 700000, NAVY, p)
-    # Watch questions
-    lines = [l.strip().lstrip('-•').strip() for l in body.split('\n') if l.strip()][:3]
-    y = 1200000
-    for line in lines:
-        p = _para(line, 1800, colour=NAVY, align='ctr')
-        _rrect(shapes, 914400, y, W-1828800, 650000, PINK, p)
-        y += 730000
-
-
-def _build_reading(shapes, title, body, act):
-    """Title + light blue text left, pink questions right."""
-    _title(shapes, title)
-    if 'Questions' in body or '?' in body:
-        parts = re.split(r'(Questions?:?)', body, maxsplit=1)
-        rt = parts[0].strip()
-        qt = ''.join(parts[1:]).strip() if len(parts) > 1 else ''
-    else:
-        rt, qt = body, ''
-    left_w = int(W * 0.52) - 457200
-    right_w = W - left_w - 1100000
-    p = ''.join(_para(l, 1500, colour=NAVY) for l in rt.split('\n'))
-    _rrect(shapes, 457200, 900000, left_w, H-1100000, LIGHT, p, anchor='t')
-    if qt:
-        p = ''.join(_para(l, 1500, colour=NAVY) for l in qt.split('\n'))
-        _rrect(shapes, left_w + 700000, 900000, right_w, H-1100000, PINK, p, anchor='t')
-    if act:
-        p = _para(act, 1300, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, H-350000, W-914400, 320000, p)
-
-
-def _build_discussion(shapes, title, body, act):
-    """Instruction text top + stacked pink question boxes."""
-    p = _para(title, 2200, colour=NAVY, align='ctr')
-    _txbox(shapes, 457200, 180000, W-914400, 600000, p)
-    qs = [q.strip().lstrip('•-0123456789. ').strip() for q in body.split('\n') if q.strip()][:5]
-    available_h = H - 900000 - 200000
-    box_h = min(700000, max(420000, (available_h - (len(qs)-1)*80000) // len(qs)))
-    y = 900000
-    for q in qs:
-        p = _para(q, 1700, colour=NAVY, align='ctr')
-        _rrect(shapes, 457200, y, W-914400, box_h, PINK, p)
-        y += box_h + 80000
-    if act:
-        p = _para(act, 1300, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, H-330000, W-914400, 300000, p)
-
-
-def _build_grammar(shapes, title, body, act):
-    """Title + navy rule box + light blue example boxes."""
-    _title(shapes, title)
-    lines = [l.strip() for l in body.split('\n') if l.strip()]
-    if lines:
-        p = _para(lines[0], 1800, colour=WHITE, align='ctr')
-        _rrect(shapes, 457200, 900000, W-914400, 650000, NAVY, p)
-    y = 1650000
-    for line in lines[1:4]:
-        p = _para(line, 1600, colour=NAVY)
-        _rrect(shapes, 457200, y, W-914400, 580000, LIGHT, p)
-        y += 640000
-    if act:
-        p = _para(act, 1300, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, H-330000, W-914400, 300000, p)
-
-
-def _build_gap_fill(shapes, title, body, act):
-    """Title + numbered sentences in light blue boxes."""
-    _title(shapes, title)
-    lines = [l.strip() for l in body.split('\n') if l.strip()][:6]
-    available_h = H - 1000000 - 300000
-    box_h = min(700000, max(380000, (available_h - (len(lines)-1)*60000) // max(len(lines),1)))
-    y = 1000000
-    for line in lines:
-        p = _para(line, 1600, colour=NAVY)
-        _rrect(shapes, 457200, y, W-914400, box_h, LIGHT, p)
-        y += box_h + 60000
-    if act:
-        p = _para(act, 1300, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, H-330000, W-914400, 300000, p)
-
-
-def _build_task(shapes, title, body, act, img):
-    """Navy instruction box top + large pink content box."""
-    p = _para(title, 2000, colour=WHITE, align='ctr')
-    _rrect(shapes, 457200, 228600, W-914400, 700000, NAVY, p)
-    if body:
-        lines = body.split('\n')
-        p = ''.join(_para(l, 1700, colour=NAVY) for l in lines)
-        _rrect(shapes, 457200, 1050000, W-914400, H-1400000, PINK, p, anchor='t')
-    if act:
-        p = _para(act, 1300, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, H-330000, W-914400, 300000, p)
-
-
-def _build_pair(shapes, title, body, act):
-    """Title top + pink instruction boxes."""
-    p = _para(title, 2200, colour=NAVY, align='ctr')
-    _txbox(shapes, 457200, 180000, W-914400, 600000, p)
-    lines = [l.strip() for l in body.split('\n') if l.strip()][:4]
-    available_h = H - 900000 - 300000
-    box_h = min(900000, max(480000, (available_h - (len(lines)-1)*80000) // max(len(lines),1)))
-    y = 900000
-    for line in lines:
-        p = _para(line, 1700, colour=NAVY, align='ctr')
-        _rrect(shapes, 457200, y, W-914400, box_h, PINK, p)
-        y += box_h + 80000
-    if act:
-        p = _para(act, 1300, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, H-330000, W-914400, 300000, p)
-
-
-def _build_game(shapes, title, body, act):
-    """Large centred title + light blue item boxes in rows."""
-    p = _para(title, 3600, bold=True, colour=NAVY, align='ctr')
-    _txbox(shapes, 457200, 200000, W-914400, 900000, p)
-    lines = [l.strip() for l in body.split('\n') if l.strip()][:7]
-    n = len(lines)
-    if n <= 3:
-        # single row
-        box_w = (W - 1000000) // n - 80000
-        for i, line in enumerate(lines):
-            x = 457200 + i * (box_w + 80000)
-            p = _para(line, 1600, colour=NAVY, align='ctr')
-            _rrect(shapes, x, 1300000, box_w, 800000, LIGHT, p)
-    else:
-        # two rows
-        cols = (n + 1) // 2
-        box_w = (W - 1000000) // cols - 80000
-        box_h = 700000
-        for i, line in enumerate(lines):
-            col = i % cols
-            row = i // cols
-            x = 457200 + col * (box_w + 80000)
-            y = 1300000 + row * (box_h + 100000)
-            p = _para(line, 1500, colour=NAVY, align='ctr')
-            _rrect(shapes, x, y, box_w, box_h, LIGHT, p)
-    if act:
-        p = _para(act, 1300, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, H-330000, W-914400, 300000, p)
-
-
-def _build_debate(shapes, title, body, act):
-    """Title + two side-by-side navy/light boxes."""
-    _title(shapes, title, sz=2800)
-    lines = [l.strip() for l in body.split('\n') if l.strip()]
-    mid = len(lines) // 2
-    left = '\n'.join(lines[:mid])
-    right = '\n'.join(lines[mid:])
-    half = (W - 1200000) // 2
-    p = ''.join(_para(l, 1600, colour=WHITE) for l in left.split('\n'))
-    _rrect(shapes, 457200, 900000, half, H-1100000, NAVY, p, anchor='t')
-    p = ''.join(_para(l, 1600, colour=NAVY) for l in right.split('\n'))
-    _rrect(shapes, 457200 + half + 200000, 900000, half, H-1100000, LIGHT, p, anchor='t')
-    if act:
-        p = _para(act, 1300, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, H-330000, W-914400, 300000, p)
-
-
-def _build_standard(shapes, title, body, act, img):
-    """Fallback: title + light blue content box."""
-    _title(shapes, title)
-    if body:
-        p = ''.join(_para(l, 1700, colour=NAVY) for l in body.split('\n'))
-        _rrect(shapes, 457200, 900000, W-914400, H-1300000, LIGHT, p, anchor='t')
-    if act:
-        p = _para(act, 1300, colour=GREY, align='ctr')
-        _txbox(shapes, 457200, H-330000, W-914400, 300000, p)
-    _img_hint(shapes, img)
-
-
-# ── Template slide modifiers ───────────────────────────────────────────────────
-
+# ── Template slide modifiers (unchanged from v4) ───────────────────────────────
 def _set_t(xml, old, new):
     return xml.replace(f'<a:t>{_esc(old)}</a:t>', f'<a:t>{_esc(new)}</a:t>', 1)
 
 def _modify_slide1(xml, lesson):
     title = lesson.get('lesson_title', 'LESSON TITLE').upper()
-    tl = lesson.get('lesson_type_label', 'LANG')
-    lv = lesson.get('level_label', 'Level 3')
-    wk = lesson.get('week', 'A')
-    meta = f'WEEK {wk} | PURPOSE | {tl} | {lv.upper()}'
-    xml = re.sub(
+    tl    = lesson.get('lesson_type_label', 'LANG')
+    lv    = lesson.get('level_label', 'Level 3')
+    wk    = lesson.get('week', 'A')
+    meta  = f'WEEK {wk} | PURPOSE | {tl} | {lv.upper()}'
+    xml   = re.sub(
         r'(<a:rPr[^>]*sz="7000"[^>]*>.*?</a:rPr>\s*<a:t>)([^<]*)(</a:t>)',
         lambda m: m.group(1) + _esc(title) + m.group(3),
         xml, count=1, flags=re.DOTALL
@@ -438,9 +647,9 @@ def _modify_slide2(xml, lesson):
     focus = lesson.get('lesson_focus', '')
     objvs = lesson.get('objectives', '')
     extra = lesson.get('extra_materials', 'None.')
-    xml = xml.replace(_esc(FOCUS_OLD), _esc(focus), 1)
-    xml = xml.replace(_esc(OBJ_OLD),   _esc(objvs), 1)
-    xml = re.sub(r'<a:t>None\.</a:t>', f'<a:t>{_esc(extra)}</a:t>', xml, count=1)
+    xml   = xml.replace(_esc(FOCUS_OLD), _esc(focus), 1)
+    xml   = xml.replace(_esc(OBJ_OLD),   _esc(objvs), 1)
+    xml   = re.sub(r'<a:t>None\.</a:t>', f'<a:t>{_esc(extra)}</a:t>', xml, count=1)
     return xml
 
 KNOWN_INSTRS = [
@@ -476,12 +685,12 @@ def _modify_plan_instrs(xml, steps):
 def _modify_plan_times(xml, steps, known_times):
     for step, old_t in zip(steps, known_times):
         new_t = f"{step['time_mins']}'"
-        xml = xml.replace(f'<a:t>{old_t}</a:t>', f'<a:t>{_esc(new_t)}</a:t>', 1)
+        xml   = xml.replace(f'<a:t>{old_t}</a:t>', f'<a:t>{_esc(new_t)}</a:t>', 1)
     return xml
 
 def _modify_materials(xml, lesson):
     notes = lesson.get('materials_notes', 'None.')
-    xml = re.sub(r'<a:t>None\.</a:t>', f'<a:t>{_esc(notes)}</a:t>', xml, count=1)
+    xml   = re.sub(r'<a:t>None\.</a:t>', f'<a:t>{_esc(notes)}</a:t>', xml, count=1)
     return xml
 
 def _fix_rels(unpacked):
@@ -504,7 +713,6 @@ def _fix_rels(unpacked):
 
 
 # ── Main entry point ───────────────────────────────────────────────────────────
-
 def build_lesson_pptx(lesson: dict, template_path: str) -> bytes:
     with tempfile.TemporaryDirectory() as tmpdir:
         unpacked = os.path.join(tmpdir, 'unpacked')
@@ -516,8 +724,6 @@ def build_lesson_pptx(lesson: dict, template_path: str) -> bytes:
             check=True, capture_output=True, text=True
         )
         print(f'[pptx_builder] unpack: {r.stdout.strip()}')
-        if r.stderr.strip():
-            print(f'[pptx_builder] unpack stderr: {r.stderr.strip()}')
 
         slides_dir   = os.path.join(unpacked, 'ppt', 'slides')
         prs_xml_path = os.path.join(unpacked, 'ppt', 'presentation.xml')
@@ -527,7 +733,7 @@ def build_lesson_pptx(lesson: dict, template_path: str) -> bytes:
 
         # 3. Modify structural slides
         steps = lesson.get('teacher_steps', [])
-        mods = [
+        mods  = [
             ('slide1.xml', lambda x: _modify_slide1(x, lesson)),
             ('slide2.xml', lambda x: _modify_slide2(x, lesson)),
             ('slide3.xml', lambda x: _modify_plan_times(
@@ -553,7 +759,7 @@ def build_lesson_pptx(lesson: dict, template_path: str) -> bytes:
         # 5. Add remaining student slides
         existing_ids = list(map(int, re.findall(
             r'<p:sldId id="(\d+)"', open(prs_xml_path).read())))
-        next_id = max(existing_ids) + 1 if existing_ids else 600
+        next_id    = max(existing_ids) + 1 if existing_ids else 600
         new_sld_ids = []
 
         for sd in student_slides[1:]:
@@ -561,9 +767,9 @@ def build_lesson_pptx(lesson: dict, template_path: str) -> bytes:
                 ['python3', os.path.join(SCRIPTS_DIR,'add_slide.py'),
                  unpacked, 'slide5.xml'],
                 capture_output=True, text=True, check=True)
-            lines = r.stdout.strip().split('\n')
+            lines   = r.stdout.strip().split('\n')
             new_fname = lines[0].split()[1]
-            rid_m = re.search(r'r:id="([^"]+)"', lines[1])
+            rid_m   = re.search(r'r:id="([^"]+)"', lines[1])
             if rid_m:
                 new_sld_ids.append(f'<p:sldId id="{next_id}" r:id="{rid_m.group(1)}"/>')
                 next_id += 1
@@ -571,12 +777,12 @@ def build_lesson_pptx(lesson: dict, template_path: str) -> bytes:
 
         # 6. Reorder sldIdLst
         prs_xml = open(prs_xml_path).read()
-        mat_m = re.search(r'<p:sldId[^>]*r:id="rId7"[^/]*/>', prs_xml)
-        nts_m = re.search(r'<p:sldId[^>]*r:id="rId8"[^/]*/>', prs_xml)
-        mat_s = mat_m.group() if mat_m else ''
-        nts_s = nts_m.group() if nts_m else ''
+        mat_m   = re.search(r'<p:sldId[^>]*r:id="rId7"[^/]*/>', prs_xml)
+        nts_m   = re.search(r'<p:sldId[^>]*r:id="rId8"[^/]*/>', prs_xml)
+        mat_s   = mat_m.group() if mat_m else ''
+        nts_s   = nts_m.group() if nts_m else ''
         prs_xml = prs_xml.replace(mat_s,'',1).replace(nts_s,'',1)
-        ins = '\n'.join(f'    {el}' for el in new_sld_ids)
+        ins     = '\n'.join(f'    {el}' for el in new_sld_ids)
         if mat_s: ins += f'\n    {mat_s}'
         if nts_s: ins += f'\n    {nts_s}'
         prs_xml = prs_xml.replace('</p:sldIdLst>', f'{ins}\n  </p:sldIdLst>')
@@ -588,7 +794,7 @@ def build_lesson_pptx(lesson: dict, template_path: str) -> bytes:
             check=True, capture_output=True, text=True
         )
         out = os.path.join(tmpdir, 'output.pptx')
-        r = subprocess.run(
+        r   = subprocess.run(
             ['python3', os.path.join(SCRIPTS_DIR,'office','pack.py'),
              unpacked, out, '--original', template_path],
             capture_output=True, text=True)
